@@ -1,0 +1,34 @@
+# Compiled Object Files
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+
+# Test files
+*test*
+*Test*
+*TEST*
+test_*
+Test_*
+TEST_*
+
+# Temporary files
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Makefile generated files
+*.a
+*.so
+
+# 42 specific ignores
+a.out
+*.gch
+infile
+outfile
