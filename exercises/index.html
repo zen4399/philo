@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Philosophers -- 演習問題集</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2333;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --warn: #f0883e;
+  --err: #f85149;
+  --correct: #238636;
+  --wrong: #da3633;
+  --code-bg: #0d1117;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+nav {
+  width: 280px;
+  min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  overflow-y: auto;
+  z-index: 100;
+  transition: transform .3s;
+}
+nav h1 {
+  font-size: 16px;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+  letter-spacing: .5px;
+}
+nav .progress-bar {
+  margin: 12px 20px;
+  background: var(--border);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+nav .progress-fill {
+  height: 100%;
+  background: var(--accent2);
+  border-radius: 4px;
+  transition: width .4s;
+  width: 0%;
+}
+nav .progress-text {
+  font-size: 12px;
+  color: var(--text2);
+  padding: 0 20px 8px;
+}
+nav ul { list-style: none; }
+nav li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 14px;
+  transition: all .15s;
+  border-left: 3px solid transparent;
+}
+nav li a:hover { background: var(--surface2); color: var(--text); }
+nav li a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,166,255,.08); }
+nav li a .badge {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--border);
+  color: var(--text2);
+}
+nav li a .badge.done { background: var(--correct); color: #fff; }
+nav .sep { height: 1px; background: var(--border); margin: 8px 20px; }
+
+.menu-btn {
+  display: none;
+  position: fixed;
+  top: 12px; left: 12px;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* ── Main ── */
+main {
+  margin-left: 280px;
+  flex: 1;
+  max-width: 860px;
+  padding: 40px 48px 120px;
+}
+
+section {
+  display: none;
+  animation: fadeIn .3s;
+}
+section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+h2 .chapter-num { color: var(--accent); font-weight: 400; }
+.section-desc {
+  color: var(--text2);
+  margin-bottom: 32px;
+  font-size: 15px;
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+}
+
+/* ── Problem Card ── */
+.problem {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.problem-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.problem-num {
+  background: var(--accent);
+  color: #000;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.problem-num.solved { background: var(--accent2); }
+.problem-title { font-weight: 600; font-size: 15px; }
+.difficulty {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.difficulty.easy { background: rgba(63,185,80,.15); color: var(--accent2); }
+.difficulty.medium { background: rgba(240,136,62,.15); color: var(--warn); }
+.difficulty.hard { background: rgba(248,81,73,.15); color: var(--err); }
+
+.problem-body { padding: 20px; }
+.problem-body p { margin-bottom: 12px; font-size: 15px; }
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 4;
+}
+code { font-family: var(--mono); font-size: 13px; }
+.inline-code {
+  background: var(--surface2);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* ── Choices (single/multi) ── */
+.choices { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  font-size: 14px;
+}
+.choice:hover { border-color: var(--accent); }
+.choice.selected { border-color: var(--accent); background: rgba(88,166,255,.08); }
+.choice.correct-answer { border-color: var(--accent2); background: rgba(63,185,80,.1); }
+.choice.wrong-answer { border-color: var(--err); background: rgba(248,81,73,.08); opacity: .7; }
+.choice-marker {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all .15s;
+}
+.choice.selected .choice-marker { border-color: var(--accent); background: var(--accent); color: #000; }
+.choice.correct-answer .choice-marker { border-color: var(--accent2); background: var(--accent2); color: #fff; }
+.choice.wrong-answer .choice-marker { border-color: var(--err); background: var(--err); color: #fff; }
+
+/* ── Code fill / free text ── */
+.code-input {
+  font-family: var(--mono);
+  font-size: 14px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 6px;
+  min-width: 180px;
+  outline: none;
+}
+.code-input:focus { border-color: var(--accent); }
+.code-input.correct { border-color: var(--accent2); color: var(--accent2); }
+.code-input.wrong { border-color: var(--err); color: var(--err); }
+
+/* ── Buttons ── */
+.btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: var(--font);
+  transition: all .15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+.btn-primary:hover { background: #79bbff; }
+
+/* ── Explanation ── */
+.explanation {
+  display: none;
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: rgba(63,185,80,.06);
+  border: 1px solid rgba(63,185,80,.2);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.explanation.visible { display: block; animation: fadeIn .3s; }
+.explanation h4 { color: var(--accent2); margin-bottom: 6px; }
+.explanation.wrong-exp {
+  background: rgba(248,81,73,.06);
+  border-color: rgba(248,81,73,.2);
+}
+.explanation.wrong-exp h4 { color: var(--err); }
+
+/* ── Ordering ── */
+.ordering-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.ordering-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: grab;
+  font-size: 14px;
+  user-select: none;
+}
+.ordering-item:active { cursor: grabbing; }
+.ordering-item .order-num {
+  background: var(--border);
+  color: var(--text2);
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.ordering-item.correct-pos .order-num { background: var(--accent2); color: #fff; }
+.ordering-item.wrong-pos .order-num { background: var(--err); color: #fff; }
+.order-arrows { display: flex; flex-direction: column; gap: 2px; margin-left: auto; }
+.order-arrows button {
+  background: none; border: none; color: var(--text2);
+  cursor: pointer; font-size: 14px; padding: 0 4px;
+  line-height: 1;
+}
+.order-arrows button:hover { color: var(--accent); }
+
+/* ── Scenario ── */
+.scenario-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+/* ── Result Banner ── */
+.result-banner {
+  display: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.result-banner.show { display: flex; align-items: center; gap: 8px; }
+.result-banner.pass { background: rgba(63,185,80,.12); color: var(--accent2); border: 1px solid rgba(63,185,80,.3); }
+.result-banner.fail { background: rgba(248,81,73,.1); color: var(--err); border: 1px solid rgba(248,81,73,.3); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  nav { transform: translateX(-100%); }
+  nav.open { transform: translateX(0); }
+  .menu-btn { display: flex; align-items: center; justify-content: center; }
+  main { margin-left: 0; padding: 60px 20px 100px; }
+}
+
+.highlight { color: var(--warn); }
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.cmt { color: #8b949e; font-style: italic; }
+.num { color: #79c0ff; }
+.type { color: #ff7b72; }
+</style>
+</head>
+<body>
+
+<button class="menu-btn" onclick="document.querySelector('nav').classList.toggle('open')">&#9776;</button>
+
+<nav id="sidebar">
+  <h1>Philosophers 演習</h1>
+  <div class="progress-text" id="progress-text">0 / 0 完了</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <ul id="nav-list"></ul>
+</nav>
+
+<main id="main-content"></main>
+
+<script>
+// ===================================================================
+//  DATA: All problems
+// ===================================================================
+const sections = [
+{
+  id: "thread-basics",
+  title: "1. スレッドの基礎",
+  desc: "pthread API の基本を理解し、スレッドの生成・合流・引数渡しを正確に把握する。",
+  problems: [
+  {
+    title: "pthread_create の引数",
+    difficulty: "easy",
+    type: "choice",
+    body: `<p><span class="inline-code">pthread_create</span> の第3引数に渡す関数のシグネチャとして正しいものはどれか。</p>`,
+    choices: [
+      "void routine(void *arg)",
+      "void *routine(void *arg)",
+      "int routine(void *arg)",
+      "void *routine(int arg)"
+    ],
+    answer: 1,
+    explanation: `<code>pthread_create</code> の第3引数は <code>void *(*)(void *)</code> 型の関数ポインタ。<br>
+      つまり <code>void *</code> を受け取り <code>void *</code> を返す関数。<br>
+      <code>void *routine(void *arg)</code> がこのシグネチャに一致する。<br><br>
+      他の選択肢は戻り値の型 (<code>void</code>, <code>int</code>) や引数の型 (<code>int</code>) が異なるためコンパイルエラーまたは未定義動作になる。`
+  },
+  {
+    title: "スレッドへの引数渡し -- バグ探し",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>以下のコードのバグを指摘せよ。</p>
+<pre><span class="type">int</span> main(<span class="type">void</span>)
+{
+    <span class="type">pthread_t</span>  threads[<span class="num">5</span>];
+    <span class="type">int</span>        i;
+
+    i = <span class="num">0</span>;
+    <span class="kw">while</span> (i &lt; <span class="num">5</span>)
+    {
+        <span class="fn">pthread_create</span>(&threads[i], NULL, routine, &i);
+        i++;
+    }
+    i = <span class="num">0</span>;
+    <span class="kw">while</span> (i &lt; <span class="num">5</span>)
+        <span class="fn">pthread_join</span>(threads[i++], NULL);
+    <span class="kw">return</span> (<span class="num">0</span>);
+}</pre>`,
+    choices: [
+      "pthread_join を呼ぶ前に全スレッドが終了してしまう",
+      "ループ変数 i のアドレスを渡しているため、スレッドが読む時点で i の値が変化している",
+      "pthread_create の第2引数に NULL を渡してはいけない",
+      "threads 配列がスタック上にあるため、スレッドからアクセスできない"
+    ],
+    answer: 1,
+    explanation: `<code>&i</code> を渡すと、全スレッドが同じアドレスを参照する。しかしメインスレッドのループで <code>i</code> はインクリメントされ続ける。<br><br>
+      スレッドが <code>*(int *)arg</code> を読む頃には <code>i</code> は既に次の値 (あるいは 5) に変わっている可能性がある。<br><br>
+      <b>正しい方法:</b> 各スレッド専用の構造体を用意し、そのアドレスを渡す。<br>
+<pre>t_philo philos[5];
+philos[i].id = i;
+pthread_create(&threads[i], NULL, routine, &philos[i]);</pre>`
+  },
+  {
+    title: "join vs detach",
+    difficulty: "easy",
+    type: "choice",
+    body: `<p>Philosophers 課題では <code>pthread_join</code> と <code>pthread_detach</code> のどちらを使うべきか、またその理由は？</p>`,
+    choices: [
+      "detach -- スレッドのリソース管理が自動化されるため効率的",
+      "join -- 全スレッドの終了を待ってからリソースを解放する必要があるため",
+      "両方使う -- 哲学者スレッドは detach、モニタースレッドは join",
+      "どちらでも同じ結果になる"
+    ],
+    answer: 1,
+    explanation: `<code>pthread_join</code> を使う理由:<br>
+      <b>1.</b> 全哲学者スレッドが終了してから mutex の destroy / メモリ解放を行う必要がある。<br>
+      <b>2.</b> detach すると、スレッドがまだ mutex を使用中に main が先にリソースを解放してしまう危険がある。<br>
+      <b>3.</b> join しないとスレッドのリソース (スタック等) がリークする。<br><br>
+      detach は「スレッドの終了を待つ必要がない」場合に使うもので、この課題のようにシミュレーション終了後にクリーンアップが必要なケースには不適切。`
+  },
+  {
+    title: "スレッドで共有されるもの",
+    difficulty: "easy",
+    type: "multi",
+    body: `<p>同一プロセス内のスレッド間で<b>共有される</b>ものを全て選べ。</p>`,
+    choices: [
+      "ヒープ (malloc で確保した領域)",
+      "スタック (ローカル変数)",
+      "グローバル変数",
+      "ファイルディスクリプタ",
+      "レジスタ (プログラムカウンタ等)",
+      "static 変数"
+    ],
+    answer: [0, 2, 3, 5],
+    explanation: `<b>共有されるもの:</b> ヒープ、グローバル変数、ファイルディスクリプタ、static変数<br>
+      <b>共有されないもの:</b> スタック (各スレッド固有)、レジスタ (各スレッド固有)<br><br>
+      Philosophers 課題では構造体を <code>malloc</code> でヒープに確保し、ポインタを各スレッドに渡す。そのため構造体のフィールド (例: <code>last_meal_time</code>) は全スレッドからアクセス可能であり、mutex による保護が必要になる。`
+  }
+  ]
+},
+{
+  id: "mutex-basics",
+  title: "2. Mutex の基礎",
+  desc: "Mutex のライフサイクル、正しい使い方、よくある誤用パターンを理解する。",
+  problems: [
+  {
+    title: "Mutex のライフサイクル -- 並べ替え",
+    difficulty: "easy",
+    type: "ordering",
+    body: `<p>Mutex の操作を正しい順序に並べ替えよ。</p>`,
+    items: [
+      "pthread_mutex_unlock",
+      "pthread_mutex_init",
+      "pthread_mutex_lock",
+      "pthread_mutex_destroy",
+      "共有変数を読み書き"
+    ],
+    correctOrder: [1, 2, 4, 0, 3],
+    explanation: `正しい順序:<br>
+      <b>1.</b> <code>init</code> -- 使用前に必ず初期化<br>
+      <b>2.</b> <code>lock</code> -- クリティカルセクションに入る<br>
+      <b>3.</b> <code>共有変数を読み書き</code> -- ロック中に操作<br>
+      <b>4.</b> <code>unlock</code> -- クリティカルセクションを抜ける<br>
+      <b>5.</b> <code>destroy</code> -- 全スレッド終了後に破棄<br><br>
+      init と destroy はプログラムのライフタイムで1回、lock/unlock は何度も繰り返す。`
+  },
+  {
+    title: "バグ探し -- unlock 漏れ",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>以下のコードにはバグがある。どれか。</p>
+<pre><span class="type">int</span> <span class="fn">check_death</span>(<span class="type">t_philo</span> *philo)
+{
+    <span class="fn">pthread_mutex_lock</span>(&philo->data->meal_mutex);
+    <span class="kw">if</span> (<span class="fn">get_time_ms</span>() - philo->last_meal_time
+        > philo->data->time_to_die)
+        <span class="kw">return</span> (<span class="num">1</span>); <span class="cmt">// 死亡</span>
+    <span class="fn">pthread_mutex_unlock</span>(&philo->data->meal_mutex);
+    <span class="kw">return</span> (<span class="num">0</span>);
+}</pre>`,
+    choices: [
+      "get_time_ms() を mutex の外で呼ぶべき",
+      "return (1) の前に unlock を呼んでいない -- mutex が永久にロックされる",
+      "meal_mutex ではなく death_mutex を使うべき",
+      "last_meal_time は mutex 保護不要"
+    ],
+    answer: 1,
+    explanation: `死亡判定が真の場合、<code>return (1)</code> で関数を抜けるが、その前に <code>pthread_mutex_unlock</code> を呼んでいない。<br><br>
+      <b>結果:</b> <code>meal_mutex</code> がロックされたまま解放されない。他のスレッドが <code>meal_mutex</code> を lock しようとすると永久にブロックされる (実質デッドロック)。<br><br>
+<b>修正:</b>
+<pre>if (get_time_ms() - philo->last_meal_time > philo->data->time_to_die)
+{
+    pthread_mutex_unlock(&philo->data->meal_mutex);
+    return (1);
+}
+pthread_mutex_unlock(&philo->data->meal_mutex);
+return (0);</pre>`
+  },
+  {
+    title: "読み取りだけなら mutex は不要？",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>あるスレッドが共有変数を<b>読むだけ</b>の場合、mutex で保護する必要はあるか。</p>
+<pre><span class="cmt">// モニタースレッド (読み取りのみ)</span>
+<span class="kw">if</span> (philo->last_meal_time + data->time_to_die &lt; <span class="fn">get_time_ms</span>())
+    <span class="cmt">// 死亡判定</span>
+
+<span class="cmt">// 哲学者スレッド (書き込み)</span>
+<span class="fn">pthread_mutex_lock</span>(&data->meal_mutex);
+philo->last_meal_time = <span class="fn">get_time_ms</span>();
+<span class="fn">pthread_mutex_unlock</span>(&data->meal_mutex);</pre>`,
+    choices: [
+      "不要 -- 読み取りだけなのでデータが壊れることはない",
+      "必要 -- 読み取りでもデータレースになり、C言語では未定義動作",
+      "volatile をつければ不要",
+      "int 型であればアトミックなので不要"
+    ],
+    answer: 1,
+    explanation: `<b>必要。</b> データレースの定義は:<br>
+      &nbsp;1. 複数スレッドが同じメモリにアクセス<br>
+      &nbsp;2. 少なくとも1つが書き込み<br>
+      &nbsp;3. 同期されていない<br><br>
+      読み取り側が mutex を使わなければ条件3を満たし、<b>未定義動作</b>になる。<br><br>
+      <b>volatile は解決にならない。</b> volatile はコンパイラの最適化を抑制するだけで、メモリバリア (他スレッドの書き込みを確実に見る保証) を提供しない。<br><br>
+      <b>int がアトミックとも限らない。</b> C言語の仕様ではアトミック性は保証されない。仮にハードウェア上でアトミックでも、コンパイラがメモリアクセスを並べ替える可能性がある。<br><br>
+      結論: <b>全てのアクセス</b> (読み書き両方) を同一の mutex で保護するのが正解。`
+  },
+  {
+    title: "異なる mutex で同じ変数を保護",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>以下のコードの問題点は何か。</p>
+<pre><span class="cmt">// スレッドA</span>
+<span class="fn">pthread_mutex_lock</span>(&mutex_A);
+shared_var++;
+<span class="fn">pthread_mutex_unlock</span>(&mutex_A);
+
+<span class="cmt">// スレッドB</span>
+<span class="fn">pthread_mutex_lock</span>(&mutex_B);
+shared_var++;
+<span class="fn">pthread_mutex_unlock</span>(&mutex_B);</pre>`,
+    choices: [
+      "問題なし -- 各スレッドがそれぞれ mutex を使っているので安全",
+      "同じ変数を異なる mutex で保護しても排他にならない -- データレース",
+      "mutex_A と mutex_B が同時にロックされるとデッドロックする",
+      "++ 演算子は使うべきでない"
+    ],
+    answer: 1,
+    explanation: `mutex は「同じ mutex を lock したスレッド同士」を排他にする仕組み。<br><br>
+      スレッドAが <code>mutex_A</code> を lock しても、スレッドBは <code>mutex_B</code> を lock するだけなのでブロックされない。結果として両者が同時に <code>shared_var</code> を操作でき、<b>データレースが発生</b>する。<br><br>
+      <b>鉄則:</b> 1つの共有変数には、常に同一の mutex でアクセスする。`
+  }
+  ]
+},
+{
+  id: "deadlock",
+  title: "3. デッドロック",
+  desc: "デッドロックの発生条件を理解し、Philosophers 固有の回避戦略を身につける。",
+  problems: [
+  {
+    title: "Coffman の4条件",
+    difficulty: "easy",
+    type: "multi",
+    body: `<p>デッドロックが発生するための<b>必要十分条件 (Coffman条件)</b> を全て選べ。</p>`,
+    choices: [
+      "相互排他 (リソースは同時に1つのスレッドしか使えない)",
+      "保持と待機 (リソースを持ったまま別のリソースを待つ)",
+      "横取り不可 (他者のリソースを強制的に奪えない)",
+      "循環待ち (スレッドがリング状に待ち合う)",
+      "優先度逆転 (低優先度スレッドが高優先度スレッドをブロック)",
+      "スレッド数が CPU コア数を超えている"
+    ],
+    answer: [0, 1, 2, 3],
+    explanation: `Coffman の4条件:<br>
+      <b>1. 相互排他</b> -- フォーク(mutex)は同時に1人しか使えない<br>
+      <b>2. 保持と待機</b> -- 左フォークを持ったまま右フォークを待つ<br>
+      <b>3. 横取り不可</b> -- 他人のフォークを奪えない<br>
+      <b>4. 循環待ち</b> -- 全員が輪になって待ち合う<br><br>
+      これら4つが<b>全て同時に</b>成立するとデッドロックが起きる。1つでも崩せば回避できる。<br>
+      Philosophers 課題では<b>循環待ち</b>を崩すのが最も実用的 (フォーク取得順の制御)。<br><br>
+      「優先度逆転」と「スレッド数 > コア数」はデッドロックの条件ではない。`
+  },
+  {
+    title: "1人の哲学者のデッドロック",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>哲学者が1人 (<code>./philo 1 800 200 200</code>) の場合、フォークの割り当てはどうなるか。</p>
+<pre>philos[<span class="num">0</span>].left_fork  = &forks[<span class="num">0</span>];
+philos[<span class="num">0</span>].right_fork = &forks[(<span class="num">0</span> + <span class="num">1</span>) % <span class="num">1</span>]; <span class="cmt">// = &forks[0]</span></pre>
+<p>この状態で <code>pthread_mutex_lock(left_fork)</code> → <code>pthread_mutex_lock(right_fork)</code> を呼ぶとどうなるか。</p>`,
+    choices: [
+      "left_fork と right_fork は同じ mutex なので、2回目の lock で自己デッドロックする",
+      "同じ mutex を2回 lock しても問題ない (再帰ロック)",
+      "左右は同じフォークだが、1回 lock するだけで食事できる",
+      "1人の場合は fork は作られないので segfault する"
+    ],
+    answer: 0,
+    explanation: `<code>(0 + 1) % 1 == 0</code> なので、left_fork と right_fork は<b>同じ mutex</b> を指す。<br><br>
+      デフォルトの pthread_mutex (PTHREAD_MUTEX_DEFAULT) は<b>再帰ロック不可</b>。同じスレッドが同じ mutex を2回 lock すると<b>未定義動作</b> (多くの実装ではデッドロック)。<br><br>
+      <b>正しい処理:</b> 1人の場合は特別扱いし、フォークを1つだけ取り、time_to_die 後に死亡させる。<br>
+<pre>if (data->num_philos == 1)
+{
+    print_status(philo, "has taken a fork");
+    precise_usleep(data->time_to_die);
+    print_status(philo, "died");
+    return (NULL);
+}</pre>`
+  },
+  {
+    title: "デッドロック回避 -- フォーク取得順",
+    difficulty: "hard",
+    type: "choice",
+    body: `<p>5人の哲学者がいる。フォーク割り当て:</p>
+<pre>哲学者1: left=fork[0], right=fork[1]
+哲学者2: left=fork[1], right=fork[2]
+哲学者3: left=fork[2], right=fork[3]
+哲学者4: left=fork[3], right=fork[4]
+哲学者5: left=fork[4], right=fork[0]</pre>
+<p>全員が「左→右」の順でフォークを取ると循環待ちが発生する。以下のどの戦略で循環待ちが壊れるか。</p>`,
+    choices: [
+      "哲学者5だけ「右→左」に変える (他は「左→右」)",
+      "偶数番号を「右→左」、奇数番号を「左→右」にする",
+      "上記のどちらでもデッドロックを回避できる",
+      "上記のどちらでもデッドロックは回避できない"
+    ],
+    answer: 2,
+    explanation: `<b>どちらも有効。</b> 本質は同じで、「循環待ちを壊す」こと。<br><br>
+      <b>戦略A (最後の1人だけ逆):</b><br>
+      哲学者5が fork[0] を先に取る → 哲学者1 は fork[0] を取れず待機 → 5が食事完了して解放 → 循環が壊れる。これは Dijkstra のリソース順序付けそのもの。<br><br>
+      <b>戦略B (偶数/奇数で逆):</b><br>
+      偶数 (2,4) と奇数 (1,3,5) でグループ分けされ、隣接する哲学者が同時に同じフォークを「先に」取ることがなくなる。これも循環を壊す。<br><br>
+      実用上は<b>戦略B</b>の方が公平性も高くなる (偶数/奇数の交互食事パターンが自然に成立)。`
+  },
+  {
+    title: "デッドロックのシナリオ判定",
+    difficulty: "hard",
+    type: "choice",
+    body: `<p>4人の哲学者全員が同時に以下を実行した。デッドロックするか。</p>
+<div class="scenario-box">哲学者1 (奇数): lock(fork[0]) -> lock(fork[1])
+哲学者2 (偶数): lock(fork[2]) -> lock(fork[1])
+哲学者3 (奇数): lock(fork[2]) -> lock(fork[3])
+哲学者4 (偶数): lock(fork[0]) -> lock(fork[3])</div>`,
+    choices: [
+      "デッドロックする -- 循環待ちが成立する",
+      "デッドロックしない -- 少なくとも1人が2本取れる",
+      "状況による -- タイミング次第",
+      "4人の場合は常にデッドロックする"
+    ],
+    answer: 1,
+    explanation: `これは偶数/奇数戦略の例。分析してみよう:<br><br>
+      <b>時刻0:</b> 全員が1つ目の fork を lock しようとする<br>
+      &nbsp; 哲学者1: fork[0] を取得<br>
+      &nbsp; 哲学者2: fork[2] を取得<br>
+      &nbsp; 哲学者3: fork[2] を待つ (2が持っている)<br>
+      &nbsp; 哲学者4: fork[0] を待つ (1が持っている)<br><br>
+      <b>結果:</b> 哲学者1と哲学者2は1つ目を取得済み。<br>
+      哲学者1 → fork[1] を lock → 成功! (誰も持っていない) → 食事開始<br>
+      哲学者2 → fork[1] を待つ (1が持っている) → ブロック<br><br>
+      哲学者1が食事を終えて fork[0], fork[1] を解放 → 哲学者2, 4 が進める → ...<br><br>
+      <b>循環が存在しない</b>ため、必ず誰かが進める。`
+  }
+  ]
+},
+{
+  id: "data-race",
+  title: "4. データレース検出",
+  desc: "実際の Philosophers コードからデータレースを見つけ出す訓練。",
+  problems: [
+  {
+    title: "どの変数にデータレースがあるか",
+    difficulty: "medium",
+    type: "multi",
+    body: `<p>以下の設計で、mutex 保護なしでアクセスするとデータレースになる変数を全て選べ。</p>
+<pre><span class="type">typedef struct</span> s_data
+{
+    <span class="type">int</span>        someone_died;     <span class="cmt">// モニターが書く / 全哲学者が読む</span>
+    <span class="type">int</span>        num_philos;       <span class="cmt">// main で設定 / 全スレッドが読む</span>
+    <span class="type">int</span>        time_to_die;      <span class="cmt">// main で設定 / 全スレッドが読む</span>
+    <span class="type">long long</span>  start_time;       <span class="cmt">// main で設定 / 全スレッドが読む</span>
+}   <span class="type">t_data</span>;
+
+<span class="type">typedef struct</span> s_philo
+{
+    <span class="type">int</span>        eat_count;        <span class="cmt">// 哲学者が書く / モニターが読む</span>
+    <span class="type">long long</span>  last_meal_time;   <span class="cmt">// 哲学者が書く / モニターが読む</span>
+    <span class="type">int</span>        id;               <span class="cmt">// 初期化時に設定 / 哲学者自身が読む</span>
+}   <span class="type">t_philo</span>;</pre>`,
+    choices: [
+      "someone_died",
+      "num_philos",
+      "time_to_die",
+      "start_time",
+      "eat_count",
+      "last_meal_time",
+      "id"
+    ],
+    answer: [0, 4, 5],
+    explanation: `データレースが起きる条件: 複数スレッドがアクセスし、少なくとも1つが書き込み、同期なし。<br><br>
+      <b>someone_died:</b> モニターが書き込み + 全哲学者が読む → <b>データレース</b><br>
+      <b>eat_count:</b> 哲学者が書き込み + モニターが読む → <b>データレース</b><br>
+      <b>last_meal_time:</b> 哲学者が書き込み + モニターが読む → <b>データレース</b><br><br>
+      <b>num_philos, time_to_die, start_time:</b> main でスレッド生成前に設定し、以降は読み取りのみ。全スレッドが読むだけなら同期不要。<br>
+      <b>id:</b> 初期化時に設定され、自スレッドだけが読む。書き込みスレッドは存在しない。<br><br>
+      <b>ポイント:</b> 「書き込みがない変数」はデータレースにならない。問題は「誰かが書き、誰かが読む」変数。`
+  },
+  {
+    title: "TSan 出力の読み取り",
+    difficulty: "hard",
+    type: "choice",
+    body: `<p>ThreadSanitizer が以下の警告を出した。何を修正すべきか。</p>
+<pre class="scenario-box">WARNING: ThreadSanitizer: data race (pid=42)
+  Write of size 8 at 0x5555... by thread T3:
+    #0 philosopher_routine <b>routine.c:52</b>
+
+  Previous read of size 8 at 0x5555... by thread T0:
+    #0 monitor_philos <b>monitor.c:18</b></pre>`,
+    choices: [
+      "routine.c:52 の書き込みだけを mutex で保護すれば解決",
+      "monitor.c:18 の読み取りだけを mutex で保護すれば解決",
+      "routine.c:52 と monitor.c:18 の両方を同一の mutex で保護する必要がある",
+      "TSan の誤検出なので無視してよい"
+    ],
+    answer: 2,
+    explanation: `データレースの解消には、同じ変数にアクセスする<b>全ての箇所</b>を同一の mutex で保護する必要がある。<br><br>
+      <b>片方だけ保護しても無意味:</b><br>
+      - 書き込み側だけ保護: 読み取り側が保護されていないので同時アクセスが起きる<br>
+      - 読み取り側だけ保護: 書き込み側が保護されていないので同上<br><br>
+      <b>size 8</b> は <code>long long</code> (8バイト) なので、おそらく <code>last_meal_time</code> の読み書き。<br>
+      routine.c:52 で <code>last_meal_time = get_time_ms()</code> を書き、monitor.c:18 で死亡判定のために読んでいる。<br>
+      両方を <code>meal_mutex</code> で保護する。`
+  },
+  {
+    title: "simulation_stopped の保護",
+    difficulty: "medium",
+    type: "fill",
+    body: `<p>シミュレーション停止チェック関数を完成させよ。空欄にmutex操作を入れよ。</p>
+<pre><span class="type">int</span>  <span class="fn">simulation_stopped</span>(<span class="type">t_data</span> *data)
+{
+    <span class="type">int</span>  stopped;
+
+    <span class="cmt">/* [A] */</span>
+    stopped = data->someone_died || data->all_ate_enough;
+    <span class="cmt">/* [B] */</span>
+    <span class="kw">return</span> (stopped);
+}</pre>`,
+    blanks: [
+      { label: "[A]", answer: ["pthread_mutex_lock(&data->death_mutex)","pthread_mutex_lock(&data->death_mutex);"], hint: "mutex をロック" },
+      { label: "[B]", answer: ["pthread_mutex_unlock(&data->death_mutex)","pthread_mutex_unlock(&data->death_mutex);"], hint: "mutex をアンロック" }
+    ],
+    explanation: `<code>someone_died</code> と <code>all_ate_enough</code> はモニタースレッドが書き込み、哲学者スレッドが読む共有変数。<br><br>
+      読み取りであっても <code>death_mutex</code> で保護する必要がある。<br><br>
+      <b>ポイント:</b> 読み取り結果をローカル変数 <code>stopped</code> にコピーしてから unlock する。こうすることで、return 後に他のスレッドがフラグを変更しても安全にローカルの値を使える。`
+  }
+  ]
+},
+{
+  id: "timing",
+  title: "5. 時間管理",
+  desc: "gettimeofday / usleep の扱いと、精密タイマーの実装を理解する。",
+  problems: [
+  {
+    title: "ミリ秒変換",
+    difficulty: "easy",
+    type: "fill",
+    body: `<p><code>gettimeofday</code> の結果をミリ秒に変換する関数を完成させよ。</p>
+<pre><span class="type">long long</span>  <span class="fn">get_time_ms</span>(<span class="type">void</span>)
+{
+    <span class="type">struct timeval</span>  tv;
+
+    <span class="fn">gettimeofday</span>(&tv, NULL);
+    <span class="kw">return</span> ((<span class="type">long long</span>)tv.tv_sec * <span class="cmt">/* [A] */</span> + tv.tv_usec / <span class="cmt">/* [B] */</span>);
+}</pre>`,
+    blanks: [
+      { label: "[A]", answer: ["1000"], hint: "秒→ミリ秒" },
+      { label: "[B]", answer: ["1000"], hint: "マイクロ秒→ミリ秒" }
+    ],
+    explanation: `<b>単位変換:</b><br>
+      &nbsp; 1秒 = 1,000 ミリ秒 → <code>tv_sec * 1000</code><br>
+      &nbsp; 1マイクロ秒 = 0.001 ミリ秒 → <code>tv_usec / 1000</code><br><br>
+      <b>なぜ long long か:</b> tv_sec (Epoch秒) は約 1,700,000,000。これに 1000 を掛けると int (約 21億) を超える。long long (64bit) なら十分。`
+  },
+  {
+    title: "usleep の精度問題",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>以下の設定で哲学者が予期せず死亡する可能性がある。なぜか。</p>
+<pre>./philo 4 410 200 200
+
+<span class="cmt">// 理論上の1サイクル: eat(200ms) + sleep(200ms) = 400ms &lt; 410ms</span></pre>`,
+    choices: [
+      "4人では同時に2人しか食べられないため、待ち時間が発生する",
+      "usleep(200000) の実際の睡眠時間が 200ms を超える誤差が蓄積するため",
+      "time_to_die は食事終了時刻から計測されるため、実質 210ms しか余裕がない",
+      "上記の全てが原因になりうる"
+    ],
+    answer: 3,
+    explanation: `<b>全てが原因になりうる。</b><br><br>
+      <b>1. フォーク待ち:</b> 4人で4本のフォーク。同時に食べられるのは2人。残り2人はフォーク待ちの間にも time_to_die のカウントダウンは進む。<br><br>
+      <b>2. usleep の誤差:</b> <code>usleep(200000)</code> は「少なくとも 200ms」の保証のみ。実際には 201~210ms かかることがある。eat + sleep が 410ms を超えると死亡。<br><br>
+      <b>3. 計測起点:</b> time_to_die は「最後の食事<b>開始</b>時刻」から計測。食事中の 200ms も含むため、次の食事開始までの実質的な猶予は 410 - 200(eat) = 210ms。sleep(200ms) + フォーク待ちがこの 210ms を超えると死亡。<br><br>
+      <b>対策:</b> usleep の代わりにビジーウェイト (precise_usleep) を使い、偶数/奇数の交互開始でフォーク待ちを最小化する。`
+  },
+  {
+    title: "precise_usleep の仕組み",
+    difficulty: "easy",
+    type: "choice",
+    body: `<p><code>precise_usleep</code> が usleep(500) を繰り返しながらループする理由として正しいものは？</p>
+<pre><span class="type">void</span>  <span class="fn">precise_usleep</span>(<span class="type">long long</span> ms)
+{
+    <span class="type">long long</span> start = <span class="fn">get_time_ms</span>();
+    <span class="kw">while</span> (<span class="fn">get_time_ms</span>() - start &lt; ms)
+        <span class="fn">usleep</span>(<span class="num">500</span>);
+}</pre>`,
+    choices: [
+      "usleep(500) は 0.5ms ごとに起きて経過時間を確認し、指定時間を過ぎたらすぐ抜ける",
+      "usleep(500) を1回だけ呼べば十分だが、念のためループしている",
+      "usleep のバグを回避するため",
+      "ループなしで usleep(ms * 1000) とすれば同じ精度が得られる"
+    ],
+    answer: 0,
+    explanation: `<b>usleep(ms * 1000) だけだと誤差が蓄積する問題がある。</b><br><br>
+      precise_usleep は:<br>
+      &nbsp;1. 短い usleep(500) (0.5ms) で CPU を明け渡す (CPU負荷を下げる)<br>
+      &nbsp;2. 起きたら <code>get_time_ms()</code> で実際の経過時間を確認<br>
+      &nbsp;3. まだ時間が足りなければ再び usleep<br>
+      &nbsp;4. 指定時間を過ぎていればループを抜ける<br><br>
+      <b>最大誤差は ~0.5ms</b> に抑えられる。usleep(200000) 一発だと最大 ~10ms の誤差が出ることがある。`
+  }
+  ]
+},
+{
+  id: "design",
+  title: "6. 設計判断",
+  desc: "Philosophers 固有の設計上の選択肢を理解し、正しい判断を下す。",
+  problems: [
+  {
+    title: "last_meal_time の更新タイミング",
+    difficulty: "hard",
+    type: "choice",
+    body: `<p><code>last_meal_time</code> を更新すべきタイミングはいつか。</p>
+<pre><span class="type">void</span>  <span class="fn">eat</span>(<span class="type">t_philo</span> *philo)
+{
+    take_forks(philo);
+    <span class="cmt">// ← 位置A</span>
+    print_status(philo, <span class="str">"is eating"</span>);
+    <span class="cmt">// ← 位置B</span>
+    precise_usleep(data->time_to_eat);
+    <span class="cmt">// ← 位置C</span>
+    release_forks(philo);
+}</pre>`,
+    choices: [
+      "位置A -- フォーク取得直後、食事開始前",
+      "位置B -- \"is eating\" 出力直後",
+      "位置C -- 食事時間経過後 (食事完了時)",
+      "A でも B でもどちらでもよい"
+    ],
+    answer: 3,
+    explanation: `<b>位置A または 位置B が正解</b> (食事<b>開始</b>時に更新する)。<br><br>
+      課題の仕様: 「最後の食事<b>開始</b>からの経過時間が time_to_die を超えたら死亡」<br><br>
+      <b>位置C は不正解。</b> 食事完了後に更新すると、time_to_eat 分だけ判定が遅れる。<br>
+      例: time_to_die=410, time_to_eat=200 の場合、C で更新すると実質 410+200=610ms まで猶予が生まれてしまい、仕様に反する。<br><br>
+      <b>A と B の違い:</b> A の方が厳密には正確 (print_status の mutex 待ち時間を含まない) だが、実用上はどちらでも動く。`
+  },
+  {
+    title: "モニターの設計 -- メインスレッド vs 別スレッド",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>死亡監視 (モニター) をメインスレッドで行うか、別途 <code>pthread_create</code> でモニタースレッドを作るか。どちらが良いか。</p>`,
+    choices: [
+      "メインスレッド -- 追加のスレッド生成が不要で、join の管理がシンプル",
+      "別スレッド -- メインスレッドを join 専用にできる",
+      "どちらでも正しく動くが、メインスレッドの方が実装がシンプル",
+      "モニタースレッドを使わないと 10ms 以内の死亡検出ができない"
+    ],
+    answer: 2,
+    explanation: `<b>どちらでも正しく動くが、メインスレッドが推奨。</b><br><br>
+      <b>メインスレッドの場合:</b><br>
+<pre>// 全スレッド生成
+for (i = 0; i &lt; N; i++)
+    pthread_create(&philos[i].thread, ...);
+// メインスレッドでモニタリング
+monitor_philos(&data);  // 死亡 or 全員完食で return
+// 全スレッド join
+for (i = 0; i &lt; N; i++)
+    pthread_join(philos[i].thread, NULL);</pre>
+      <b>利点:</b> シンプル。追加スレッド不要。monitor が return した後に join するので、全スレッドの終了を確実に待てる。<br><br>
+      <b>別スレッドの場合:</b> monitor スレッド自体も join する必要があり、コードが複雑になるだけで利点がない。`
+  },
+  {
+    title: "死亡メッセージ後のログ出力",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>哲学者Xが死亡した後、他の哲学者のログが出力されてしまった。何が問題か。</p>
+<pre class="scenario-box">410 3 died
+410 1 is eating    <-- 死亡後のメッセージ (NG)</pre>`,
+    choices: [
+      "print_status 内で someone_died チェックと printf が別の mutex で保護されている",
+      "someone_died のチェック → printf の間に他スレッドが割り込めるため",
+      "someone_died を print_mutex の中でチェックしていないため",
+      "B と C の両方が原因"
+    ],
+    answer: 3,
+    explanation: `<b>典型的なパターン:</b><br>
+<pre>// 間違ったコード
+if (!data->someone_died)  // (1) ここでチェック
+{
+    // (2) この間に他スレッドが someone_died = 1 にする可能性!
+    printf("%lld %d %s\\n", ts, id, status);  // (3) 死亡後に出力
+}</pre>
+      <b>修正方法:</b> <code>someone_died</code> チェックと <code>printf</code> を<b>同じクリティカルセクション</b>内で行う。<br>
+<pre>pthread_mutex_lock(&data->print_mutex);
+pthread_mutex_lock(&data->death_mutex);
+if (!data->someone_died || strcmp(status, "died") == 0)
+{
+    pthread_mutex_unlock(&data->death_mutex);
+    printf("%lld %d %s\\n", ts, id, status);
+}
+else
+    pthread_mutex_unlock(&data->death_mutex);
+pthread_mutex_unlock(&data->print_mutex);</pre>
+      print_mutex 内で death_mutex をチェックすることで、チェックと出力の間に他スレッドが介入することを防ぐ。`
+  },
+  {
+    title: "奇数人数での公平性",
+    difficulty: "hard",
+    type: "fill",
+    body: `<p>5人の哲学者 (奇数人数) で、time_to_eat=200, time_to_sleep=100 の場合。<br>全員が公平に食べるために thinking 時に入れるべき遅延を計算せよ。</p>
+<p>ヒント: 1サイクル (eat + sleep + think) の間に、隣の哲学者2人分の食事が完了する必要がある。<br>
+<code>eat + sleep + think >= eat * 2</code></p>`,
+    blanks: [
+      { label: "think_time (ms)", answer: ["100", "200", "300"], hint: "eat*2 - sleep - eat = eat - sleep, または eat*2 - sleep で余裕を持たせる" }
+    ],
+    explanation: `<b>理論最小値:</b> <code>eat + sleep + think >= eat * 2</code><br>
+      <code>200 + 100 + think >= 400</code><br>
+      <code>think >= 100</code><br><br>
+      <b>実用値:</b> usleep の誤差を考慮して余裕を持たせるなら <code>eat * 2 - sleep = 200 * 2 - 100 = 300</code> を使う実装もある。<br><br>
+      100 (理論最小値), 200, 300 (余裕あり) のいずれも許容される。重要なのは:<br>
+      &nbsp; - 0 だと奇数人数で餓死する<br>
+      &nbsp; - 大きすぎると time_to_die を超えて死亡する<br>
+      &nbsp; - <code>time_to_die > eat * 2 + sleep</code> の余裕が必要`
+  }
+  ]
+},
+{
+  id: "scenarios",
+  title: "7. 総合シナリオ",
+  desc: "実行結果の予測とトラブルシューティング。",
+  problems: [
+  {
+    title: "実行結果の予測",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>以下のコマンドの期待される動作は？</p>
+<pre>./philo 1 800 200 200</pre>`,
+    choices: [
+      "哲学者1が永久に食事を繰り返す",
+      "約 800ms 後に \"1 died\" と出力されて終了する",
+      "即座にエラーで終了する",
+      "フォークが足りないため即座に死亡する"
+    ],
+    answer: 1,
+    explanation: `哲学者が1人の場合、フォークは1本しかない。食事には2本必要なので<b>絶対に食事できない</b>。<br><br>
+      <b>期待される出力:</b><br>
+<pre>0 1 has taken a fork
+800 1 died</pre>
+      フォーク1本を取った後、もう1本は存在しないため食事を開始できず、time_to_die (800ms) 経過後に死亡する。<br><br>
+      「即座に死亡」ではない。time_to_die はシミュレーション開始 (または最後の食事開始) からのカウントダウンなので、800ms は猶予がある。`
+  },
+  {
+    title: "全員食べ終わり判定",
+    difficulty: "medium",
+    type: "choice",
+    body: `<p>以下のコマンドでシミュレーションが正常に終了するために必要な条件は？</p>
+<pre>./philo 5 800 200 200 3</pre>`,
+    choices: [
+      "いずれか1人が3回食べたら終了",
+      "全員が3回ずつ食べたら終了 (合計15回)",
+      "合計3回の食事で終了 (全員合わせて)",
+      "最初の哲学者が3回食べたら終了"
+    ],
+    answer: 1,
+    explanation: `<code>number_of_times_each_philosopher_must_eat</code> は「各哲学者が<b>少なくとも</b>この回数食べる」こと。<br><br>
+      <b>全員が</b>3回食べたらシミュレーション終了。<br>
+      5人 × 3回 = 合計15回の食事が行われた後に終了する。<br><br>
+      <b>実装:</b> モニターが全哲学者の <code>eat_count >= must_eat_count</code> をチェック。全員がこの条件を満たしたら <code>all_ate_enough = 1</code> にして終了。`
+  },
+  {
+    title: "死亡タイミングの厳密な判定",
+    difficulty: "hard",
+    type: "choice",
+    body: `<p>以下の設定で哲学者は死亡するか。</p>
+<pre>./philo 4 310 200 100
+
+<span class="cmt">// 偶数/奇数の交互食事パターン:</span>
+<span class="cmt">//   奇数 (1,3): 即座に食事開始</span>
+<span class="cmt">//   偶数 (2,4): ~100ms 遅延後に食事開始</span>
+<span class="cmt">//</span>
+<span class="cmt">// 奇数の1サイクル: eat(200) + sleep(100) = 300ms</span>
+<span class="cmt">// 偶数の1サイクル: eat(200) + sleep(100) = 300ms</span></pre>`,
+    choices: [
+      "死なない -- 300ms < 310ms で間に合う",
+      "ギリギリ死なない -- 余裕は ~10ms",
+      "死ぬ可能性が高い -- usleep 誤差とフォーク待ちで 310ms を超える",
+      "確実に死ぬ -- 理論上間に合わない"
+    ],
+    answer: 2,
+    explanation: `<b>理論上は 300ms < 310ms で間に合うように見えるが...</b><br><br>
+      <b>実際の流れ (哲学者1):</b><br>
+      &nbsp; 0ms: eat 開始, last_meal_time = 0<br>
+      &nbsp; 200ms: eat 完了, sleep 開始<br>
+      &nbsp; 300ms: sleep 完了, thinking → フォーク取得を試みる<br>
+      &nbsp; 300~310ms: フォーク待ち + usleep 誤差<br>
+      &nbsp; 310ms: <b>time_to_die 到達!</b><br><br>
+      偶数番号が食事中 (100~300ms) なのでフォークが使用中。哲学者1は 300ms で起きてもすぐにフォークを取得できず、数ms のブロックが発生する。<br><br>
+      usleep(200000) が 202ms かかっただけでも 302ms + フォーク待ち > 310ms で死亡。<br><br>
+      <b>結論:</b> 余裕が 10ms しかないケースでは、usleep の誤差とフォーク争奪の遅延で死亡する可能性が高い。`
+  },
+  {
+    title: "200人テスト",
+    difficulty: "hard",
+    type: "choice",
+    body: `<p><code>./philo 200 800 200 200</code> で一部の哲学者が死亡する場合、最も可能性の高い原因は？</p>`,
+    choices: [
+      "スレッド生成のオーバーヘッド -- 最初のスレッドと最後のスレッドの開始時刻に差がある",
+      "コンテキストスイッチのオーバーヘッド -- 200スレッドの切り替えで遅延が蓄積",
+      "偶数/奇数の初期遅延がないため全員が同時にフォーク争奪",
+      "上記の全て"
+    ],
+    answer: 3,
+    explanation: `<b>大人数テストではこれら全てが複合的に問題になる。</b><br><br>
+      <b>1. スレッド生成のオーバーヘッド:</b><br>
+      200スレッドの <code>pthread_create</code> に数ms~数十ms かかる。最初に生成されたスレッドの last_meal_time と最後のスレッドの開始に差が生まれる。<br>
+      → <b>対策:</b> last_meal_time を start_time で初期化 (スレッド内ではなくスレッド生成前に)。<br><br>
+      <b>2. コンテキストスイッチ:</b><br>
+      200スレッドを4~8コアで切り替える。各スレッドの CPU 時間が減り、usleep の誤差が大きくなる。<br><br>
+      <b>3. フォーク争奪:</b><br>
+      偶数/奇数の初期遅延がないと、200人が一斉にフォークを取りに行き、一部が長時間待たされる。<br>
+      → <b>対策:</b> 偶数番号は開始時に <code>time_to_eat / 2</code> ms 待つ。`
+  }
+  ]
+}
+];
+
+// ===================================================================
+//  STATE
+// ===================================================================
+const state = {
+  currentSection: 0,
+  solved: {},
+  init() {
+    try { this.solved = JSON.parse(localStorage.getItem('philo_solved') || '{}'); } catch(e) {}
+  },
+  markSolved(key) {
+    this.solved[key] = true;
+    localStorage.setItem('philo_solved', JSON.stringify(this.solved));
+    updateProgress();
+  },
+  isSolved(key) { return !!this.solved[key]; },
+  reset() { this.solved = {}; localStorage.removeItem('philo_solved'); updateProgress(); render(); }
+};
+
+// ===================================================================
+//  RENDER
+// ===================================================================
+function render() {
+  renderNav();
+  renderSections();
+  showSection(state.currentSection);
+  updateProgress();
+}
+
+function renderNav() {
+  const ul = document.getElementById('nav-list');
+  ul.innerHTML = '';
+  sections.forEach((sec, si) => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = '#';
+    a.textContent = sec.title;
+    const solvedCount = sec.problems.filter((_, pi) => state.isSolved(`${si}-${pi}`)).length;
+    const badge = document.createElement('span');
+    badge.className = 'badge' + (solvedCount === sec.problems.length ? ' done' : '');
+    badge.textContent = `${solvedCount}/${sec.problems.length}`;
+    a.appendChild(badge);
+    a.onclick = e => { e.preventDefault(); showSection(si); document.querySelector('nav').classList.remove('open'); };
+    if (si === state.currentSection) a.classList.add('active');
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+  // Reset link
+  const sep = document.createElement('li');
+  sep.innerHTML = '<div class="sep"></div>';
+  ul.appendChild(sep);
+  const resetLi = document.createElement('li');
+  const resetA = document.createElement('a');
+  resetA.href = '#';
+  resetA.textContent = 'Progress Reset';
+  resetA.style.color = 'var(--err)';
+  resetA.onclick = e => { e.preventDefault(); if(confirm('進捗をリセットしますか？')) state.reset(); };
+  resetLi.appendChild(resetA);
+  ul.appendChild(resetLi);
+}
+
+function renderSections() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = '';
+  sections.forEach((sec, si) => {
+    const section = document.createElement('section');
+    section.id = sec.id;
+    section.innerHTML = `<h2><span class="chapter-num">Chapter ${si+1}</span> ${sec.title.replace(/^\d+\.\s*/, '')}</h2>
+      <p class="section-desc">${sec.desc}</p>`;
+    sec.problems.forEach((prob, pi) => {
+      section.appendChild(renderProblem(prob, si, pi));
+    });
+    main.appendChild(section);
+  });
+}
+
+function renderProblem(prob, si, pi) {
+  const key = `${si}-${pi}`;
+  const div = document.createElement('div');
+  div.className = 'problem';
+  div.id = `prob-${key}`;
+  const solved = state.isSolved(key);
+  div.innerHTML = `
+    <div class="problem-header">
+      <div class="problem-num ${solved ? 'solved' : ''}">${pi+1}</div>
+      <div class="problem-title">${prob.title}</div>
+      <span class="difficulty ${prob.difficulty}">${prob.difficulty.toUpperCase()}</span>
+    </div>
+    <div class="problem-body">
+      ${prob.body}
+      <div id="interact-${key}"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="checkAnswer('${key}')">解答を確認</button>
+      </div>
+      <div class="result-banner" id="result-${key}"></div>
+      <div class="explanation" id="exp-${key}">
+        <h4>解説</h4>
+        ${prob.explanation}
+      </div>
+    </div>`;
+  setTimeout(() => renderInteraction(prob, key), 0);
+  return div;
+}
+
+function renderInteraction(prob, key) {
+  const container = document.getElementById(`interact-${key}`);
+  if (!container) return;
+  if (prob.type === 'choice' || prob.type === 'multi') {
+    const isMulti = prob.type === 'multi';
+    let html = `<div class="choices" data-type="${prob.type}">`;
+    prob.choices.forEach((c, i) => {
+      html += `<div class="choice" data-idx="${i}" onclick="toggleChoice(this, ${isMulti})">
+        <div class="choice-marker">${isMulti ? '' : ''}</div>
+        <div>${c}</div>
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } else if (prob.type === 'fill') {
+    let html = '<div style="display:flex;flex-direction:column;gap:10px;margin:12px 0">';
+    prob.blanks.forEach((b, i) => {
+      html += `<div style="display:flex;align-items:center;gap:10px">
+        <code style="min-width:60px">${b.label}</code>
+        <input class="code-input" id="fill-${key}-${i}" placeholder="${b.hint || ''}" autocomplete="off">
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } else if (prob.type === 'ordering') {
+    let items = prob.items.map((item, i) => ({text: item, origIdx: i}));
+    // shuffle
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    let html = `<div class="ordering-list" id="order-${key}">`;
+    items.forEach((item, i) => {
+      html += `<div class="ordering-item" data-orig="${item.origIdx}">
+        <span class="order-num">${i+1}</span>
+        <span>${item.text}</span>
+        <div class="order-arrows">
+          <button onclick="moveItem(this.closest('.ordering-item'),-1)">&#9650;</button>
+          <button onclick="moveItem(this.closest('.ordering-item'),1)">&#9660;</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }
+}
+
+function toggleChoice(el, isMulti) {
+  if (el.classList.contains('correct-answer') || el.classList.contains('wrong-answer')) return;
+  if (!isMulti) {
+    el.parentElement.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
+  }
+  el.classList.toggle('selected');
+}
+
+function moveItem(item, dir) {
+  const list = item.parentElement;
+  const items = [...list.children];
+  const idx = items.indexOf(item);
+  if (dir === -1 && idx > 0) list.insertBefore(item, items[idx-1]);
+  else if (dir === 1 && idx < items.length-1) list.insertBefore(items[idx+1], item);
+  // update numbers
+  [...list.children].forEach((c, i) => c.querySelector('.order-num').textContent = i+1);
+}
+
+// ===================================================================
+//  CHECK ANSWER
+// ===================================================================
+function checkAnswer(key) {
+  const [si, pi] = key.split('-').map(Number);
+  const prob = sections[si].problems[pi];
+  let correct = false;
+  if (prob.type === 'choice') {
+    const choices = document.querySelectorAll(`#interact-${key} .choice`);
+    const selected = [...choices].findIndex(c => c.classList.contains('selected'));
+    correct = selected === prob.answer;
+    choices.forEach((c, i) => {
+      c.classList.remove('selected');
+      if (i === prob.answer) c.classList.add('correct-answer');
+      else if (i === selected && selected !== prob.answer) c.classList.add('wrong-answer');
+    });
+  } else if (prob.type === 'multi') {
+    const choices = document.querySelectorAll(`#interact-${key} .choice`);
+    const selected = [...choices].map((c, i) => c.classList.contains('selected') ? i : -1).filter(i => i !== -1);
+    correct = JSON.stringify(selected.sort()) === JSON.stringify([...prob.answer].sort());
+    choices.forEach((c, i) => {
+      c.classList.remove('selected');
+      if (prob.answer.includes(i)) c.classList.add('correct-answer');
+      else if (selected.includes(i)) c.classList.add('wrong-answer');
+    });
+  } else if (prob.type === 'fill') {
+    correct = true;
+    prob.blanks.forEach((b, i) => {
+      const input = document.getElementById(`fill-${key}-${i}`);
+      const val = input.value.trim();
+      const answers = Array.isArray(b.answer) ? b.answer : [b.answer];
+      if (answers.some(a => val === a || val === a.replace(/;$/, ''))) {
+        input.classList.add('correct');
+        input.classList.remove('wrong');
+      } else {
+        input.classList.add('wrong');
+        input.classList.remove('correct');
+        correct = false;
+        input.value = answers[0];
+      }
+      input.readOnly = true;
+    });
+  } else if (prob.type === 'ordering') {
+    const items = [...document.querySelectorAll(`#order-${key} .ordering-item`)];
+    const userOrder = items.map(el => parseInt(el.dataset.orig));
+    correct = JSON.stringify(userOrder) === JSON.stringify(prob.correctOrder);
+    items.forEach((el, i) => {
+      if (parseInt(el.dataset.orig) === prob.correctOrder[i]) {
+        el.classList.add('correct-pos');
+      } else {
+        el.classList.add('wrong-pos');
+      }
+    });
+    // Show correct order
+    if (!correct) {
+      const list = document.getElementById(`order-${key}`);
+      const sorted = prob.correctOrder.map(idx => items.find(el => parseInt(el.dataset.orig) === idx));
+      sorted.forEach(el => list.appendChild(el));
+      [...list.children].forEach((c, i) => {
+        c.querySelector('.order-num').textContent = i+1;
+        c.classList.remove('wrong-pos');
+        c.classList.add('correct-pos');
+      });
+    }
+  }
+  // Result
+  const banner = document.getElementById(`result-${key}`);
+  banner.className = 'result-banner show ' + (correct ? 'pass' : 'fail');
+  banner.textContent = correct ? 'Correct!' : 'Incorrect -- 正解を表示しました';
+  // Explanation
+  const exp = document.getElementById(`exp-${key}`);
+  exp.className = 'explanation visible' + (correct ? '' : ' wrong-exp');
+  if (correct) {
+    state.markSolved(key);
+    const numEl = document.querySelector(`#prob-${key} .problem-num`);
+    if (numEl) numEl.classList.add('solved');
+  }
+  renderNav();
+}
+
+// ===================================================================
+//  NAVIGATION
+// ===================================================================
+function showSection(idx) {
+  state.currentSection = idx;
+  document.querySelectorAll('section').forEach((s, i) => s.classList.toggle('active', i === idx));
+  document.querySelectorAll('nav li a').forEach((a, i) => a.classList.toggle('active', i === idx));
+  window.scrollTo(0, 0);
+}
+
+function updateProgress() {
+  let total = 0, done = 0;
+  sections.forEach((sec, si) => {
+    sec.problems.forEach((_, pi) => {
+      total++;
+      if (state.isSolved(`${si}-${pi}`)) done++;
+    });
+  });
+  document.getElementById('progress-text').textContent = `${done} / ${total} 完了`;
+  document.getElementById('progress-fill').style.width = total ? `${(done/total*100).toFixed(0)}%` : '0%';
+}
+
+// ===================================================================
+//  INIT
+// ===================================================================
+state.init();
+render();
+</script>
+</body>
+</html>

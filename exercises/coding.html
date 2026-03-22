@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Philosophers -- Coding Lab</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2333;
+  --surface3: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #f0883e;
+  --red: #f85149;
+  --purple: #d2a8ff;
+  --yellow: #e3b341;
+  --cyan: #79c0ff;
+  --font: 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Source Code Pro', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.7; display: flex; min-height: 100vh; }
+
+/* ── Nav ── */
+nav {
+  width: 300px; min-width: 300px;
+  background: var(--surface); border-right: 1px solid var(--border);
+  position: fixed; top: 0; left: 0; bottom: 0;
+  overflow-y: auto; z-index: 100; transition: transform .3s;
+  display: flex; flex-direction: column;
+}
+nav .logo { padding: 20px; border-bottom: 1px solid var(--border); }
+nav .logo h1 { font-size: 15px; color: var(--accent); letter-spacing: .3px; }
+nav .logo p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+nav .progress-wrap { padding: 12px 20px; }
+nav .progress-bar { background: var(--border); border-radius: 4px; height: 5px; overflow: hidden; }
+nav .progress-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width .4s; width: 0%; }
+nav .progress-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+nav ul { list-style: none; flex: 1; overflow-y: auto; padding-bottom: 40px; }
+nav li { border-bottom: 1px solid var(--border); }
+nav li a {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; color: var(--text2); text-decoration: none;
+  font-size: 13px; transition: all .15s; border-left: 3px solid transparent;
+}
+nav li a:hover { background: var(--surface2); color: var(--text); }
+nav li a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,166,255,.06); }
+nav li a .step-num {
+  background: var(--surface3); color: var(--text2);
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+nav li a .step-num.done { background: var(--green); color: #fff; }
+nav li a .step-title { flex: 1; }
+nav li a .diff {
+  font-size: 10px; padding: 1px 7px; border-radius: 8px; font-weight: 600;
+}
+nav li a .diff.S1 { background: rgba(63,185,80,.15); color: var(--green); }
+nav li a .diff.S2 { background: rgba(240,136,62,.12); color: var(--orange); }
+nav li a .diff.S3 { background: rgba(248,81,73,.12); color: var(--red); }
+
+.menu-btn {
+  display: none; position: fixed; top: 10px; left: 10px; z-index: 200;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  width: 38px; height: 38px; border-radius: 8px; font-size: 18px; cursor: pointer;
+}
+
+/* ── Main ── */
+main { margin-left: 300px; flex: 1; padding: 0; }
+
+.exercise { display: none; animation: fadeIn .25s; }
+.exercise.active { display: flex; flex-direction: column; min-height: 100vh; }
+@keyframes fadeIn { from { opacity: 0; } }
+
+/* ── Top: Description ── */
+.exercise-top {
+  padding: 32px 40px;
+  border-bottom: 1px solid var(--border);
+  max-width: 900px;
+}
+.exercise-top .breadcrumb { font-size: 12px; color: var(--text2); margin-bottom: 8px; }
+.exercise-top h2 { font-size: 24px; margin-bottom: 12px; }
+.exercise-top h2 .ex-num { color: var(--accent); font-weight: 400; }
+.exercise-top .objective {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.exercise-top .objective b { color: var(--green); }
+.exercise-top .desc { font-size: 14px; color: var(--text); }
+.exercise-top .desc p { margin-bottom: 10px; }
+.exercise-top .desc code {
+  background: var(--surface2); padding: 1px 6px; border-radius: 4px;
+  font-family: var(--mono); font-size: 13px;
+}
+.exercise-top .desc pre {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; font-family: var(--mono);
+  font-size: 13px; overflow-x: auto; margin: 8px 0 12px; line-height: 1.6;
+}
+
+.expected-output {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 18px; margin-top: 12px;
+}
+.expected-output h4 { font-size: 13px; color: var(--green); margin-bottom: 6px; }
+.expected-output pre {
+  font-family: var(--mono); font-size: 13px; color: var(--text2);
+  white-space: pre-wrap; margin: 0; background: none; border: none; padding: 0;
+}
+
+/* ── Editor Area ── */
+.editor-area {
+  flex: 1; display: flex; flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+.editor-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.editor-toolbar .filename {
+  font-family: var(--mono); font-size: 13px; color: var(--accent);
+  background: var(--surface2); padding: 4px 12px; border-radius: 6px;
+}
+.toolbar-btn {
+  padding: 5px 14px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); cursor: pointer; font-size: 12px;
+  font-family: var(--font); transition: all .15s;
+}
+.toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+.toolbar-btn.primary { background: var(--green); color: #000; border-color: var(--green); font-weight: 600; }
+.toolbar-btn.primary:hover { background: #4cc960; }
+.toolbar-btn.hint-btn { border-color: var(--orange); color: var(--orange); }
+.toolbar-btn.hint-btn:hover { background: rgba(240,136,62,.1); }
+.toolbar-spacer { flex: 1; }
+
+.editor-container { flex: 1; display: flex; position: relative; }
+textarea.code-editor {
+  flex: 1; background: var(--bg); color: var(--text);
+  border: none; padding: 20px; padding-left: 60px;
+  font-family: var(--mono); font-size: 14px;
+  line-height: 1.7; tab-size: 4; resize: none; outline: none;
+  min-height: 400px;
+}
+textarea.code-editor::placeholder { color: var(--surface3); }
+
+.line-numbers {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 48px;
+  background: var(--surface); border-right: 1px solid var(--border);
+  padding: 20px 0; font-family: var(--mono); font-size: 14px;
+  line-height: 1.7; color: var(--text2); text-align: right;
+  user-select: none; overflow: hidden; pointer-events: none;
+}
+.line-numbers div { padding-right: 12px; }
+
+/* ── Panels (hints, solution, compile) ── */
+.panel {
+  display: none; border-top: 1px solid var(--border);
+  background: var(--surface); padding: 16px 20px;
+  font-size: 14px; max-height: 500px; overflow-y: auto;
+}
+.panel.visible { display: block; animation: fadeIn .2s; }
+.panel h4 { margin-bottom: 8px; }
+.panel pre {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; font-family: var(--mono);
+  font-size: 13px; line-height: 1.6; overflow-x: auto;
+  margin: 8px 0;
+}
+.panel .hint-item {
+  padding: 10px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px;
+  margin-bottom: 8px; cursor: pointer;
+}
+.hint-item .hint-label { color: var(--orange); font-weight: 600; font-size: 13px; }
+.hint-item .hint-content { display: none; margin-top: 8px; font-size: 13px; line-height: 1.7; }
+.hint-item.open .hint-content { display: block; }
+
+.compile-box {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; font-family: var(--mono); font-size: 13px;
+  margin: 8px 0; display: flex; align-items: center; gap: 10px;
+}
+.compile-box code { color: var(--cyan); flex: 1; }
+.compile-box button {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 12px; border-radius: 6px;
+  cursor: pointer; font-size: 12px;
+}
+.compile-box button:hover { border-color: var(--accent); }
+
+.solution-code { position: relative; }
+.solution-code .copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text2); padding: 3px 10px; border-radius: 6px;
+  cursor: pointer; font-size: 11px;
+}
+.solution-code .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ── Nav buttons ── */
+.nav-buttons {
+  display: flex; gap: 12px; padding: 20px 40px;
+  border-top: 1px solid var(--border); background: var(--surface);
+}
+.nav-btn {
+  padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); cursor: pointer;
+  font-size: 14px; font-family: var(--font); transition: all .15s;
+}
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.nav-btn.next { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; margin-left: auto; }
+.nav-btn.next:hover { background: #79bbff; }
+.nav-btn.done-btn { background: var(--green); color: #000; border-color: var(--green); font-weight: 600; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  nav { transform: translateX(-100%); }
+  nav.open { transform: translateX(0); }
+  .menu-btn { display: flex; align-items: center; justify-content: center; }
+  main { margin-left: 0; }
+  .exercise-top { padding: 60px 16px 20px; }
+  .nav-buttons { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<button class="menu-btn" onclick="document.querySelector('nav').classList.toggle('open')">&#9776;</button>
+
+<nav>
+  <div class="logo">
+    <h1>Philosophers Coding Lab</h1>
+    <p>10 exercises -- from threads to full simulation</p>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="pf"></div></div>
+    <div class="progress-label" id="pl">0 / 10</div>
+  </div>
+  <ul id="nav-list"></ul>
+</nav>
+
+<main id="main"></main>
+
+<script>
+// =========================================================================
+//  EXERCISES DATA
+// =========================================================================
+const EX = [
+// ─── Ex 0 ───
+{
+  title: "スレッドを作る",
+  difficulty: 1,
+  filename: "ex00_thread.c",
+  objective: "pthread_create と pthread_join を使い、スレッドを生成して合流する基本を体験する。",
+  description: `<p>2つのスレッドを作成し、各スレッドが自分の番号を出力するプログラムを書け。</p>
+<p>要件:</p>
+<ul>
+  <li>スレッドを2つ作成する</li>
+  <li>各スレッドは <code>"Thread X started\\n"</code> と出力する (X は 1 または 2)</li>
+  <li>メインスレッドは両スレッドの終了を待ってから <code>"All threads done\\n"</code> と出力する</li>
+</ul>
+<p>注意: 引数には<b>ループ変数のアドレスを渡してはいけない</b>。各スレッド専用のデータを用意すること。</p>`,
+  expectedOutput: `Thread 1 started
+Thread 2 started
+All threads done
+(スレッドの出力順は入れ替わる可能性あり)`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+
+typedef struct s_data
+{
+\tint\tid;
+}\tt_data;
+
+void\t*routine(void *arg)
+{
+\t// TODO: arg を t_data * にキャストし、id を出力する
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\tthreads[2];
+\tt_data\t\tdata[2];
+\tint\t\t\ti;
+
+\t// TODO: data[i].id を設定し、pthread_create でスレッド生成
+\ti = 0;
+\twhile (i < 2)
+\t{
+
+\t\ti++;
+\t}
+\t// TODO: pthread_join で全スレッドの終了を待つ
+\ti = 0;
+\twhile (i < 2)
+\t{
+
+\t\ti++;
+\t}
+\tprintf("All threads done\\n");
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: pthread_create の引数", content: "<code>pthread_create(&threads[i], NULL, routine, &data[i])</code><br>第4引数で各スレッド専用の構造体のアドレスを渡す。" },
+    { label: "Hint 2: routine 内のキャスト", content: "<code>t_data *d = (t_data *)arg;</code><br><code>printf(\"Thread %d started\\n\", d->id);</code>" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+
+typedef struct s_data
+{
+\tint\tid;
+}\tt_data;
+
+void\t*routine(void *arg)
+{
+\tt_data\t*d;
+
+\td = (t_data *)arg;
+\tprintf("Thread %d started\\n", d->id);
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\tthreads[2];
+\tt_data\t\tdata[2];
+\tint\t\t\ti;
+
+\ti = 0;
+\twhile (i < 2)
+\t{
+\t\tdata[i].id = i + 1;
+\t\tpthread_create(&threads[i], NULL, routine, &data[i]);
+\t\ti++;
+\t}
+\ti = 0;
+\twhile (i < 2)
+\t{
+\t\tpthread_join(threads[i], NULL);
+\t\ti++;
+\t}
+\tprintf("All threads done\\n");
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex00 ex00_thread.c -lpthread && ./ex00"
+},
+// ─── Ex 1 ───
+{
+  title: "データレースを観察する",
+  difficulty: 1,
+  filename: "ex01_race.c",
+  objective: "mutex なしで共有変数にアクセスし、データレースの影響を実際に確認する。",
+  description: `<p>2つのスレッドが同じカウンタを 1,000,000 回ずつインクリメントするプログラムを書け。</p>
+<p>要件:</p>
+<ul>
+  <li>グローバル変数 <code>counter</code> を 0 で初期化</li>
+  <li>2スレッドがそれぞれ 1,000,000 回 <code>counter++</code> する</li>
+  <li>メインスレッドが最終値を出力する</li>
+  <li><b>mutex は使わない</b> (データレースを意図的に起こす)</li>
+</ul>
+<p>期待: 正しければ 2,000,000 になるはずだが、データレースにより<b>毎回異なる値</b>が出る。</p>`,
+  expectedOutput: `Counter = 1532847  (実行するたびに値が変わる。2000000 にならない)`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+
+int\tcounter = 0;
+
+void\t*increment(void *arg)
+{
+\tint\ti;
+
+\t(void)arg;
+\ti = 0;
+\twhile (i < 1000000)
+\t{
+\t\t// TODO: counter をインクリメント
+\t\ti++;
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\tt1;
+\tpthread_t\tt2;
+
+\t// TODO: 2つのスレッドを作成して join し、counter を出力
+\tprintf("Counter = %d\\n", counter);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: 何度も実行してみる", content: "コンパイルして5回ほど実行してみよう。毎回異なる値が出るはず。<br><code>for i in $(seq 1 5); do ./ex01; done</code>" },
+    { label: "Hint 2: TSan で確認", content: "<code>cc -fsanitize=thread -g -o ex01 ex01_race.c -lpthread</code><br>で実行すると WARNING が出る。これがデータレース。" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+
+int\tcounter = 0;
+
+void\t*increment(void *arg)
+{
+\tint\ti;
+
+\t(void)arg;
+\ti = 0;
+\twhile (i < 1000000)
+\t{
+\t\tcounter++;
+\t\ti++;
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\tt1;
+\tpthread_t\tt2;
+
+\tpthread_create(&t1, NULL, increment, NULL);
+\tpthread_create(&t2, NULL, increment, NULL);
+\tpthread_join(t1, NULL);
+\tpthread_join(t2, NULL);
+\tprintf("Counter = %d\\n", counter);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex01 ex01_race.c -lpthread && for i in $(seq 1 5); do ./ex01; done"
+},
+// ─── Ex 2 ───
+{
+  title: "Mutex でデータレースを修正",
+  difficulty: 1,
+  filename: "ex02_mutex.c",
+  objective: "Ex01 のデータレースを mutex で保護し、正しい結果 (2,000,000) を毎回得る。",
+  description: `<p>Ex01 のプログラムに mutex を追加して、<code>counter</code> が正確に 2,000,000 になるようにせよ。</p>
+<p>要件:</p>
+<ul>
+  <li><code>pthread_mutex_t</code> を宣言し、<code>init</code> / <code>destroy</code> する</li>
+  <li><code>counter++</code> の前後で <code>lock</code> / <code>unlock</code> する</li>
+  <li>mutex のポインタをスレッドに渡す (グローバル変数は使わない方がよい練習)</li>
+</ul>`,
+  expectedOutput: `Counter = 2000000  (毎回同じ値)`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+
+typedef struct s_data
+{
+\tint\t\t\t\t*counter;
+\tpthread_mutex_t\t*mutex;
+}\tt_data;
+
+void\t*increment(void *arg)
+{
+\tt_data\t*d;
+\tint\t\ti;
+
+\td = (t_data *)arg;
+\ti = 0;
+\twhile (i < 1000000)
+\t{
+\t\t// TODO: mutex で保護しながら counter をインクリメント
+\t\ti++;
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\t\tthreads[2];
+\tpthread_mutex_t\tmutex;
+\tint\t\t\t\tcounter;
+\tt_data\t\t\tdata[2];
+\tint\t\t\t\ti;
+
+\tcounter = 0;
+\t// TODO: mutex を初期化
+\t// TODO: data[i] に counter と mutex のポインタを設定
+\t// TODO: スレッド2つ生成、join、結果表示、mutex 破棄
+\tprintf("Counter = %d\\n", counter);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: mutex の初期化", content: "<code>pthread_mutex_init(&mutex, NULL);</code>" },
+    { label: "Hint 2: ロックの位置", content: "<pre>pthread_mutex_lock(d->mutex);\n(*(d->counter))++;\npthread_mutex_unlock(d->mutex);</pre>" },
+    { label: "Hint 3: data の設定", content: "<pre>data[i].counter = &counter;\ndata[i].mutex = &mutex;</pre>" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+
+typedef struct s_data
+{
+\tint\t\t\t\t*counter;
+\tpthread_mutex_t\t*mutex;
+}\tt_data;
+
+void\t*increment(void *arg)
+{
+\tt_data\t*d;
+\tint\t\ti;
+
+\td = (t_data *)arg;
+\ti = 0;
+\twhile (i < 1000000)
+\t{
+\t\tpthread_mutex_lock(d->mutex);
+\t\t(*(d->counter))++;
+\t\tpthread_mutex_unlock(d->mutex);
+\t\ti++;
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\t\tthreads[2];
+\tpthread_mutex_t\tmutex;
+\tint\t\t\t\tcounter;
+\tt_data\t\t\tdata[2];
+\tint\t\t\t\ti;
+
+\tcounter = 0;
+\tpthread_mutex_init(&mutex, NULL);
+\ti = 0;
+\twhile (i < 2)
+\t{
+\t\tdata[i].counter = &counter;
+\t\tdata[i].mutex = &mutex;
+\t\tpthread_create(&threads[i], NULL, increment, &data[i]);
+\t\ti++;
+\t}
+\ti = 0;
+\twhile (i < 2)
+\t{
+\t\tpthread_join(threads[i], NULL);
+\t\ti++;
+\t}
+\tprintf("Counter = %d\\n", counter);
+\tpthread_mutex_destroy(&mutex);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex02 ex02_mutex.c -lpthread && for i in $(seq 1 5); do ./ex02; done"
+},
+// ─── Ex 3 ───
+{
+  title: "デッドロックを体験する",
+  difficulty: 2,
+  filename: "ex03_deadlock.c",
+  objective: "2つの mutex を逆順に lock してデッドロックを意図的に発生させ、その後修正する。",
+  description: `<p>2つのスレッドが2つの mutex をロックするプログラムを書け。</p>
+<p><b>Step 1 (デッドロック版):</b></p>
+<ul>
+  <li>スレッド1: mutex_a をロック → mutex_b をロック</li>
+  <li>スレッド2: mutex_b をロック → mutex_a をロック</li>
+  <li>実行するとプログラムが停止する (デッドロック)</li>
+</ul>
+<p><b>Step 2 (修正版):</b></p>
+<ul>
+  <li>両スレッドとも mutex_a → mutex_b の順でロックする (リソース順序付け)</li>
+  <li>プログラムが正常に終了する</li>
+</ul>
+<p>まずデッドロック版を書いて体験し、その後修正せよ。</p>`,
+  expectedOutput: `=== デッドロック版 ===
+(プログラムがハングする。Ctrl+C で停止)
+
+=== 修正版 ===
+Thread 1: locked both
+Thread 2: locked both
+Done`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+
+pthread_mutex_t\tmutex_a;
+pthread_mutex_t\tmutex_b;
+
+void\t*thread1_routine(void *arg)
+{
+\t(void)arg;
+\t// TODO: mutex_a -> mutex_b の順でロック (正しい順序)
+\tprintf("Thread 1: locked both\\n");
+\t// TODO: 両方アンロック
+\treturn (NULL);
+}
+
+void\t*thread2_routine(void *arg)
+{
+\t(void)arg;
+\t// Step 1: mutex_b -> mutex_a (デッドロック!)
+\t// Step 2: mutex_a -> mutex_b (修正版)
+\tprintf("Thread 2: locked both\\n");
+\t// TODO: 両方アンロック
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\tt1;
+\tpthread_t\tt2;
+
+\tpthread_mutex_init(&mutex_a, NULL);
+\tpthread_mutex_init(&mutex_b, NULL);
+\t// TODO: スレッド生成、join
+\tprintf("Done\\n");
+\tpthread_mutex_destroy(&mutex_a);
+\tpthread_mutex_destroy(&mutex_b);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: デッドロック版", content: "スレッド2で <code>pthread_mutex_lock(&mutex_b); usleep(100); pthread_mutex_lock(&mutex_a);</code> とする。<br>usleep を入れるとデッドロック再現率が上がる。" },
+    { label: "Hint 2: なぜ停止するか", content: "スレッド1が mutex_a を持ち mutex_b を待つ。スレッド2が mutex_b を持ち mutex_a を待つ。<br>互いに相手の解放を待ち、永久に進まない。" },
+    { label: "Hint 3: 修正方法", content: "両方のスレッドで <b>mutex_a → mutex_b</b> の順に lock する。<br>順序を統一すれば循環待ちが起きない。" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+
+pthread_mutex_t\tmutex_a;
+pthread_mutex_t\tmutex_b;
+
+void\t*thread1_routine(void *arg)
+{
+\t(void)arg;
+\tpthread_mutex_lock(&mutex_a);
+\tusleep(1000);
+\tpthread_mutex_lock(&mutex_b);
+\tprintf("Thread 1: locked both\\n");
+\tpthread_mutex_unlock(&mutex_b);
+\tpthread_mutex_unlock(&mutex_a);
+\treturn (NULL);
+}
+
+void\t*thread2_routine(void *arg)
+{
+\t(void)arg;
+\t// 修正版: mutex_a -> mutex_b の順 (thread1 と同じ)
+\tpthread_mutex_lock(&mutex_a);
+\tusleep(1000);
+\tpthread_mutex_lock(&mutex_b);
+\tprintf("Thread 2: locked both\\n");
+\tpthread_mutex_unlock(&mutex_b);
+\tpthread_mutex_unlock(&mutex_a);
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\tt1;
+\tpthread_t\tt2;
+
+\tpthread_mutex_init(&mutex_a, NULL);
+\tpthread_mutex_init(&mutex_b, NULL);
+\tpthread_create(&t1, NULL, thread1_routine, NULL);
+\tpthread_create(&t2, NULL, thread2_routine, NULL);
+\tpthread_join(t1, NULL);
+\tpthread_join(t2, NULL);
+\tprintf("Done\\n");
+\tpthread_mutex_destroy(&mutex_a);
+\tpthread_mutex_destroy(&mutex_b);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex03 ex03_deadlock.c -lpthread && timeout 3 ./ex03 || echo 'DEADLOCK (timed out)'"
+},
+// ─── Ex 4 ───
+{
+  title: "get_time_ms を実装する",
+  difficulty: 1,
+  filename: "ex04_time.c",
+  objective: "gettimeofday を使ってミリ秒単位のタイムスタンプを取得する関数を書く。",
+  description: `<p>Philosophers 課題で頻出する <code>get_time_ms()</code> を実装せよ。</p>
+<p>要件:</p>
+<ul>
+  <li><code>gettimeofday</code> を使い、現在時刻をミリ秒 (long long) で返す</li>
+  <li>テスト: 2回呼び出しの間に <code>usleep(100000)</code> (100ms) を入れ、差が約100msであることを確認</li>
+</ul>`,
+  expectedOutput: `Start: 1711000000500
+End:   1711000000600
+Elapsed: 100 ms (約100msであれば正解)`,
+  starterCode: `#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+
+\t// TODO: gettimeofday で時刻を取得し、ミリ秒に変換して返す
+\treturn (0);
+}
+
+int\tmain(void)
+{
+\tlong long\tstart;
+\tlong long\tend;
+
+\tstart = get_time_ms();
+\tusleep(100000);
+\tend = get_time_ms();
+\tprintf("Start: %lld\\n", start);
+\tprintf("End:   %lld\\n", end);
+\tprintf("Elapsed: %lld ms\\n", end - start);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: 変換式", content: "1秒 = 1000 ミリ秒, 1マイクロ秒 = 0.001 ミリ秒<br><code>tv.tv_sec * 1000 + tv.tv_usec / 1000</code>" },
+    { label: "Hint 2: キャスト", content: "<code>tv.tv_sec</code> は <code>time_t</code> (通常32bitまたは64bit)。<br><code>(long long)tv.tv_sec * 1000</code> とキャストしないとオーバーフローする可能性がある。" }
+  ],
+  solution: `#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+int\tmain(void)
+{
+\tlong long\tstart;
+\tlong long\tend;
+
+\tstart = get_time_ms();
+\tusleep(100000);
+\tend = get_time_ms();
+\tprintf("Start: %lld\\n", start);
+\tprintf("End:   %lld\\n", end);
+\tprintf("Elapsed: %lld ms\\n", end - start);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex04 ex04_time.c && ./ex04"
+},
+// ─── Ex 5 ───
+{
+  title: "precise_usleep を実装する",
+  difficulty: 2,
+  filename: "ex05_precise_sleep.c",
+  objective: "usleep の精度問題を理解し、ビジーウェイト方式の精密スリープを実装する。",
+  description: `<p><code>usleep</code> の誤差を検証し、<code>precise_usleep</code> を実装せよ。</p>
+<p>要件:</p>
+<ul>
+  <li><code>usleep(200000)</code> (200ms) の実際の経過時間を計測して表示</li>
+  <li><code>precise_usleep(200)</code> の実際の経過時間を計測して表示</li>
+  <li>5回ずつ実行して誤差を比較する</li>
+</ul>
+<p><code>precise_usleep</code> の仕組み: <code>usleep(500)</code> を繰り返しながら <code>get_time_ms()</code> で実際の経過時間をチェックし、指定時間を過ぎたらループを抜ける。</p>`,
+  expectedOutput: `--- usleep(200000) ---
+Trial 1: 200 ms (誤差 0ms)
+Trial 2: 201 ms (誤差 1ms)
+...
+--- precise_usleep(200) ---
+Trial 1: 200 ms (誤差 0ms)
+Trial 2: 200 ms (誤差 0ms)
+...`,
+  starterCode: `#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprecise_usleep(long long ms)
+{
+\t// TODO: ビジーウェイト方式の精密スリープを実装
+}
+
+int\tmain(void)
+{
+\tlong long\tstart;
+\tlong long\telapsed;
+\tint\t\t\ti;
+
+\tprintf("--- usleep(200000) ---\\n");
+\ti = 0;
+\twhile (i < 5)
+\t{
+\t\tstart = get_time_ms();
+\t\tusleep(200000);
+\t\telapsed = get_time_ms() - start;
+\t\tprintf("Trial %d: %lld ms (error %lldms)\\n",
+\t\t\ti + 1, elapsed, elapsed - 200);
+\t\ti++;
+\t}
+\tprintf("--- precise_usleep(200) ---\\n");
+\ti = 0;
+\twhile (i < 5)
+\t{
+\t\tstart = get_time_ms();
+\t\tprecise_usleep(200);
+\t\telapsed = get_time_ms() - start;
+\t\tprintf("Trial %d: %lld ms (error %lldms)\\n",
+\t\t\ti + 1, elapsed, elapsed - 200);
+\t\ti++;
+\t}
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: ループ構造", content: "<pre>long long start = get_time_ms();\nwhile (get_time_ms() - start < ms)\n    usleep(500);</pre>" },
+    { label: "Hint 2: usleep(500) の理由", content: "0.5ms 刻みでチェックすることで、最大誤差を ~1ms に抑えつつ CPU 負荷も抑える。<br>usleep(100) だと精度は高いが CPU を食う。usleep(1000) だと誤差が 1ms 以上出る。" }
+  ],
+  solution: `#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprecise_usleep(long long ms)
+{
+\tlong long\tstart;
+
+\tstart = get_time_ms();
+\twhile (get_time_ms() - start < ms)
+\t\tusleep(500);
+}
+
+int\tmain(void)
+{
+\tlong long\tstart;
+\tlong long\telapsed;
+\tint\t\t\ti;
+
+\tprintf("--- usleep(200000) ---\\n");
+\ti = 0;
+\twhile (i < 5)
+\t{
+\t\tstart = get_time_ms();
+\t\tusleep(200000);
+\t\telapsed = get_time_ms() - start;
+\t\tprintf("Trial %d: %lld ms (error %lldms)\\n",
+\t\t\ti + 1, elapsed, elapsed - 200);
+\t\ti++;
+\t}
+\tprintf("--- precise_usleep(200) ---\\n");
+\ti = 0;
+\twhile (i < 5)
+\t{
+\t\tstart = get_time_ms();
+\t\tprecise_usleep(200);
+\t\telapsed = get_time_ms() - start;
+\t\tprintf("Trial %d: %lld ms (error %lldms)\\n",
+\t\t\ti + 1, elapsed, elapsed - 200);
+\t\ti++;
+\t}
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex05 ex05_precise_sleep.c && ./ex05"
+},
+// ─── Ex 6 ───
+{
+  title: "タイムスタンプ付きログ出力",
+  difficulty: 2,
+  filename: "ex06_log.c",
+  objective: "複数スレッドからの出力をmutexで保護し、タイムスタンプ付きのログ出力を実装する。",
+  description: `<p>Philosophers のログ出力を模倣するプログラムを書け。</p>
+<p>要件:</p>
+<ul>
+  <li>3つのスレッドが、それぞれ <code>"timestamp_ms id message"</code> の形式で出力</li>
+  <li>タイムスタンプはプログラム開始からの経過ミリ秒</li>
+  <li><code>print_mutex</code> でメッセージが混ざらないよう保護</li>
+  <li>各スレッドは 100ms 間隔で 3 回メッセージを出力</li>
+</ul>
+<pre>出力形式: "timestamp id message\\n"
+例: "0 1 is thinking"
+    "100 1 is eating"</pre>`,
+  expectedOutput: `0 1 is thinking
+0 2 is thinking
+0 3 is thinking
+100 1 is eating
+100 2 is eating
+...
+(タイムスタンプ付き、メッセージが混ざらない)`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef struct s_data
+{
+\tint\t\t\t\tid;
+\tlong long\t\tstart_time;
+\tpthread_mutex_t\t*print_mutex;
+}\tt_data;
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprint_log(t_data *d, const char *msg)
+{
+\t// TODO: print_mutex でロック → タイムスタンプ計算 → printf → アンロック
+}
+
+void\t*routine(void *arg)
+{
+\tt_data\t\t*d;
+\tconst char\t*msgs[3];
+\tint\t\t\ti;
+
+\td = (t_data *)arg;
+\tmsgs[0] = "is thinking";
+\tmsgs[1] = "is eating";
+\tmsgs[2] = "is sleeping";
+\ti = 0;
+\twhile (i < 3)
+\t{
+\t\tprint_log(d, msgs[i]);
+\t\tusleep(100000);
+\t\ti++;
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\t\tthreads[3];
+\tpthread_mutex_t\tprint_mutex;
+\tt_data\t\t\tdata[3];
+\tlong long\t\tstart;
+\tint\t\t\t\ti;
+
+\tpthread_mutex_init(&print_mutex, NULL);
+\tstart = get_time_ms();
+\ti = 0;
+\twhile (i < 3)
+\t{
+\t\tdata[i].id = i + 1;
+\t\tdata[i].start_time = start;
+\t\tdata[i].print_mutex = &print_mutex;
+\t\tpthread_create(&threads[i], NULL, routine, &data[i]);
+\t\ti++;
+\t}
+\ti = 0;
+\twhile (i < 3)
+\t\tpthread_join(threads[i++], NULL);
+\tpthread_mutex_destroy(&print_mutex);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: print_log の構造", content: "<pre>pthread_mutex_lock(d->print_mutex);\nprintf(\"%lld %d %s\\n\",\n    get_time_ms() - d->start_time, d->id, msg);\npthread_mutex_unlock(d->print_mutex);</pre>" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef struct s_data
+{
+\tint\t\t\t\tid;
+\tlong long\t\tstart_time;
+\tpthread_mutex_t\t*print_mutex;
+}\tt_data;
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprint_log(t_data *d, const char *msg)
+{
+\tlong long\tts;
+
+\tpthread_mutex_lock(d->print_mutex);
+\tts = get_time_ms() - d->start_time;
+\tprintf("%lld %d %s\\n", ts, d->id, msg);
+\tpthread_mutex_unlock(d->print_mutex);
+}
+
+void\t*routine(void *arg)
+{
+\tt_data\t\t*d;
+\tconst char\t*msgs[3];
+\tint\t\t\ti;
+
+\td = (t_data *)arg;
+\tmsgs[0] = "is thinking";
+\tmsgs[1] = "is eating";
+\tmsgs[2] = "is sleeping";
+\ti = 0;
+\twhile (i < 3)
+\t{
+\t\tprint_log(d, msgs[i]);
+\t\tusleep(100000);
+\t\ti++;
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\t\tthreads[3];
+\tpthread_mutex_t\tprint_mutex;
+\tt_data\t\t\tdata[3];
+\tlong long\t\tstart;
+\tint\t\t\t\ti;
+
+\tpthread_mutex_init(&print_mutex, NULL);
+\tstart = get_time_ms();
+\ti = 0;
+\twhile (i < 3)
+\t{
+\t\tdata[i].id = i + 1;
+\t\tdata[i].start_time = start;
+\t\tdata[i].print_mutex = &print_mutex;
+\t\tpthread_create(&threads[i], NULL, routine, &data[i]);
+\t\ti++;
+\t}
+\ti = 0;
+\twhile (i < 3)
+\t\tpthread_join(threads[i++], NULL);
+\tpthread_mutex_destroy(&print_mutex);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex06 ex06_log.c -lpthread && ./ex06"
+},
+// ─── Ex 7 ───
+{
+  title: "フォークの取得と解放",
+  difficulty: 2,
+  filename: "ex07_forks.c",
+  objective: "2人の哲学者によるフォーク取得・食事・解放のサイクルを実装する。デッドロック回避を含む。",
+  description: `<p>2人の哲学者と2本のフォークでシミュレーションを行え。</p>
+<p>要件:</p>
+<ul>
+  <li>フォーク2本を <code>pthread_mutex_t forks[2]</code> で表現</li>
+  <li>哲学者1: left=fork[0], right=fork[1]</li>
+  <li>哲学者2: left=fork[1], right=fork[0]</li>
+  <li>偶数/奇数でフォーク取得順を変え、デッドロックを回避</li>
+  <li>各哲学者が3回食事したら終了</li>
+  <li>タイムスタンプ付きで <code>"ts id has taken a fork"</code>, <code>"ts id is eating"</code> を出力</li>
+</ul>`,
+  expectedOutput: `0 1 has taken a fork
+0 1 has taken a fork
+0 1 is eating
+200 1 is sleeping
+200 2 has taken a fork
+200 2 has taken a fork
+200 2 is eating
+...`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef struct s_philo
+{
+\tint\t\t\t\tid;
+\tint\t\t\t\teat_count;
+\tpthread_mutex_t\t*left_fork;
+\tpthread_mutex_t\t*right_fork;
+\tpthread_mutex_t\t*print_mutex;
+\tlong long\t\tstart_time;
+}\tt_philo;
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprecise_usleep(long long ms)
+{
+\tlong long\ts;
+\ts = get_time_ms();
+\twhile (get_time_ms() - s < ms)
+\t\tusleep(500);
+}
+
+void\tprint_status(t_philo *p, const char *msg)
+{
+\tpthread_mutex_lock(p->print_mutex);
+\tprintf("%lld %d %s\\n", get_time_ms() - p->start_time, p->id, msg);
+\tpthread_mutex_unlock(p->print_mutex);
+}
+
+void\t*philosopher(void *arg)
+{
+\tt_philo\t*p;
+
+\tp = (t_philo *)arg;
+\tif (p->id % 2 == 0)
+\t\tusleep(1000);
+\twhile (p->eat_count < 3)
+\t{
+\t\t// TODO: フォーク取得 (偶数/奇数でロック順を変える)
+\t\t// TODO: "has taken a fork" x2, "is eating" を出力
+\t\t// TODO: precise_usleep(200) で食事
+\t\t// TODO: eat_count++
+\t\t// TODO: フォーク解放
+\t\t// TODO: "is sleeping" を出力、precise_usleep(200)
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\t\tthreads[2];
+\tpthread_mutex_t\tforks[2];
+\tpthread_mutex_t\tprint_mutex;
+\tt_philo\t\t\tphilos[2];
+\tlong long\t\tstart;
+\tint\t\t\t\ti;
+
+\tpthread_mutex_init(&forks[0], NULL);
+\tpthread_mutex_init(&forks[1], NULL);
+\tpthread_mutex_init(&print_mutex, NULL);
+\tstart = get_time_ms();
+\tphilos[0] = (t_philo){1, 0, &forks[0], &forks[1], &print_mutex, start};
+\tphilos[1] = (t_philo){2, 0, &forks[1], &forks[0], &print_mutex, start};
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_create(&threads[i], NULL, philosopher, &philos[i]);
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_join(threads[i], NULL);
+\tpthread_mutex_destroy(&forks[0]);
+\tpthread_mutex_destroy(&forks[1]);
+\tpthread_mutex_destroy(&print_mutex);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: フォーク取得順", content: "奇数: left→right、偶数: right→left<pre>if (p->id % 2 == 0)\n{\n    pthread_mutex_lock(p->right_fork);\n    print_status(p, \"has taken a fork\");\n    pthread_mutex_lock(p->left_fork);\n    print_status(p, \"has taken a fork\");\n}\nelse { /* left→right */ }</pre>" },
+    { label: "Hint 2: 食事→睡眠", content: "<pre>print_status(p, \"is eating\");\nprecise_usleep(200);\np->eat_count++;\npthread_mutex_unlock(p->left_fork);\npthread_mutex_unlock(p->right_fork);\nprint_status(p, \"is sleeping\");\nprecise_usleep(200);</pre>" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef struct s_philo
+{
+\tint\t\t\t\tid;
+\tint\t\t\t\teat_count;
+\tpthread_mutex_t\t*left_fork;
+\tpthread_mutex_t\t*right_fork;
+\tpthread_mutex_t\t*print_mutex;
+\tlong long\t\tstart_time;
+}\tt_philo;
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval\ttv;
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprecise_usleep(long long ms)
+{
+\tlong long\ts;
+\ts = get_time_ms();
+\twhile (get_time_ms() - s < ms)
+\t\tusleep(500);
+}
+
+void\tprint_status(t_philo *p, const char *msg)
+{
+\tpthread_mutex_lock(p->print_mutex);
+\tprintf("%lld %d %s\\n", get_time_ms() - p->start_time, p->id, msg);
+\tpthread_mutex_unlock(p->print_mutex);
+}
+
+void\ttake_forks(t_philo *p)
+{
+\tif (p->id % 2 == 0)
+\t{
+\t\tpthread_mutex_lock(p->right_fork);
+\t\tprint_status(p, "has taken a fork");
+\t\tpthread_mutex_lock(p->left_fork);
+\t\tprint_status(p, "has taken a fork");
+\t}
+\telse
+\t{
+\t\tpthread_mutex_lock(p->left_fork);
+\t\tprint_status(p, "has taken a fork");
+\t\tpthread_mutex_lock(p->right_fork);
+\t\tprint_status(p, "has taken a fork");
+\t}
+}
+
+void\t*philosopher(void *arg)
+{
+\tt_philo\t*p;
+
+\tp = (t_philo *)arg;
+\tif (p->id % 2 == 0)
+\t\tusleep(1000);
+\twhile (p->eat_count < 3)
+\t{
+\t\ttake_forks(p);
+\t\tprint_status(p, "is eating");
+\t\tprecise_usleep(200);
+\t\tp->eat_count++;
+\t\tpthread_mutex_unlock(p->left_fork);
+\t\tpthread_mutex_unlock(p->right_fork);
+\t\tprint_status(p, "is sleeping");
+\t\tprecise_usleep(200);
+\t}
+\treturn (NULL);
+}
+
+int\tmain(void)
+{
+\tpthread_t\t\tthreads[2];
+\tpthread_mutex_t\tforks[2];
+\tpthread_mutex_t\tprint_mutex;
+\tt_philo\t\t\tphilos[2];
+\tlong long\t\tstart;
+\tint\t\t\t\ti;
+
+\tpthread_mutex_init(&forks[0], NULL);
+\tpthread_mutex_init(&forks[1], NULL);
+\tpthread_mutex_init(&print_mutex, NULL);
+\tstart = get_time_ms();
+\tphilos[0] = (t_philo){1, 0, &forks[0], &forks[1], &print_mutex, start};
+\tphilos[1] = (t_philo){2, 0, &forks[1], &forks[0], &print_mutex, start};
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_create(&threads[i], NULL, philosopher, &philos[i]);
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_join(threads[i], NULL);
+\tpthread_mutex_destroy(&forks[0]);
+\tpthread_mutex_destroy(&forks[1]);
+\tpthread_mutex_destroy(&print_mutex);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex07 ex07_forks.c -lpthread && ./ex07"
+},
+// ─── Ex 8 ───
+{
+  title: "死亡監視モニターを実装する",
+  difficulty: 3,
+  filename: "ex08_monitor.c",
+  objective: "メインスレッドから哲学者の死亡を監視し、time_to_die を超えたら停止するロジックを書く。",
+  description: `<p>哲学者2人のシミュレーションに死亡監視を追加せよ。</p>
+<p>要件:</p>
+<ul>
+  <li><code>last_meal_time</code> を mutex で保護しつつ管理</li>
+  <li>メインスレッドでモニタリングループを回す</li>
+  <li><code>get_time_ms() - last_meal_time > time_to_die</code> で死亡判定</li>
+  <li><code>someone_died</code> フラグを立て、全スレッドを停止させる</li>
+  <li>テスト: <code>time_to_die=300, time_to_eat=200, time_to_sleep=200</code> で死亡を確認</li>
+</ul>`,
+  expectedOutput: `0 1 has taken a fork
+0 1 has taken a fork
+0 1 is eating
+200 1 is sleeping
+200 2 has taken a fork
+...
+~300 X died`,
+  starterCode: `#include <pthread.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef struct s_data\tt_data;
+
+typedef struct s_philo
+{
+\tint\t\t\t\tid;
+\tlong long\t\tlast_meal_time;
+\tpthread_mutex_t\t*left_fork;
+\tpthread_mutex_t\t*right_fork;
+\tt_data\t\t\t*data;
+}\tt_philo;
+
+struct s_data
+{
+\tint\t\t\t\ttime_to_die;
+\tint\t\t\t\ttime_to_eat;
+\tint\t\t\t\ttime_to_sleep;
+\tint\t\t\t\tsomeone_died;
+\tlong long\t\tstart_time;
+\tpthread_mutex_t\tprint_mutex;
+\tpthread_mutex_t\tmeal_mutex;
+\tpthread_mutex_t\tdeath_mutex;
+\tpthread_mutex_t\tforks[2];
+\tt_philo\t\t\tphilos[2];
+};
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval tv;
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprecise_usleep(long long ms)
+{
+\tlong long s = get_time_ms();
+\twhile (get_time_ms() - s < ms)
+\t\tusleep(500);
+}
+
+int\tis_dead(t_data *d)
+{
+\tint r;
+\tpthread_mutex_lock(&d->death_mutex);
+\tr = d->someone_died;
+\tpthread_mutex_unlock(&d->death_mutex);
+\treturn (r);
+}
+
+void\tprint_status(t_philo *p, const char *msg)
+{
+\tif (is_dead(p->data))
+\t\treturn ;
+\tpthread_mutex_lock(&p->data->print_mutex);
+\tif (!is_dead(p->data))
+\t\tprintf("%lld %d %s\\n",
+\t\t\tget_time_ms() - p->data->start_time, p->id, msg);
+\tpthread_mutex_unlock(&p->data->print_mutex);
+}
+
+void\t*philosopher(void *arg)
+{
+\tt_philo *p = (t_philo *)arg;
+\tif (p->id % 2 == 0)
+\t\tusleep(1000);
+\twhile (!is_dead(p->data))
+\t{
+\t\t// TODO: フォーク取得 (偶数/奇数), 食事, last_meal_time 更新, 睡眠
+\t\t// last_meal_time の更新は meal_mutex で保護すること
+\t}
+\treturn (NULL);
+}
+
+void\tmonitor(t_data *d)
+{
+\t// TODO: 全哲学者を巡回して死亡チェック
+\t// get_time_ms() - philo.last_meal_time > time_to_die なら
+\t// "died" を出力して someone_died = 1
+}
+
+int\tmain(void)
+{
+\tt_data\t\td;
+\tpthread_t\tthreads[2];
+\tint\t\t\ti;
+
+\td.time_to_die = 300;
+\td.time_to_eat = 200;
+\td.time_to_sleep = 200;
+\td.someone_died = 0;
+\tpthread_mutex_init(&d.print_mutex, NULL);
+\tpthread_mutex_init(&d.meal_mutex, NULL);
+\tpthread_mutex_init(&d.death_mutex, NULL);
+\tpthread_mutex_init(&d.forks[0], NULL);
+\tpthread_mutex_init(&d.forks[1], NULL);
+\td.start_time = get_time_ms();
+\td.philos[0] = (t_philo){1, d.start_time, &d.forks[0], &d.forks[1], &d};
+\td.philos[1] = (t_philo){2, d.start_time, &d.forks[1], &d.forks[0], &d};
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_create(&threads[i], NULL, philosopher, &d.philos[i]);
+\tmonitor(&d);
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_join(threads[i], NULL);
+\tpthread_mutex_destroy(&d.print_mutex);
+\tpthread_mutex_destroy(&d.meal_mutex);
+\tpthread_mutex_destroy(&d.death_mutex);
+\tpthread_mutex_destroy(&d.forks[0]);
+\tpthread_mutex_destroy(&d.forks[1]);
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: monitor ループ", content: "<pre>while (1)\n{\n    for each philo:\n        lock(meal_mutex)\n        if (now - philo.last_meal_time > time_to_die)\n            unlock, print died, set flag, return\n        unlock\n    usleep(1000);\n}</pre>" },
+    { label: "Hint 2: philosopher の食事部分", content: "<pre>take_forks(p);\nprint_status(p, \"is eating\");\npthread_mutex_lock(&p->data->meal_mutex);\np->last_meal_time = get_time_ms();\npthread_mutex_unlock(&p->data->meal_mutex);\nprecise_usleep(p->data->time_to_eat);\nrelease_forks(p);\nprint_status(p, \"is sleeping\");\nprecise_usleep(p->data->time_to_sleep);</pre>" },
+    { label: "Hint 3: someone_died の設定", content: "<pre>pthread_mutex_lock(&d->death_mutex);\nd->someone_died = 1;\npthread_mutex_unlock(&d->death_mutex);</pre>" }
+  ],
+  solution: `#include <pthread.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef struct s_data\tt_data;
+typedef struct s_philo
+{
+\tint\t\t\t\tid;
+\tlong long\t\tlast_meal_time;
+\tpthread_mutex_t\t*left_fork;
+\tpthread_mutex_t\t*right_fork;
+\tt_data\t\t\t*data;
+}\tt_philo;
+
+struct s_data
+{
+\tint\t\t\t\ttime_to_die;
+\tint\t\t\t\ttime_to_eat;
+\tint\t\t\t\ttime_to_sleep;
+\tint\t\t\t\tsomeone_died;
+\tlong long\t\tstart_time;
+\tpthread_mutex_t\tprint_mutex;
+\tpthread_mutex_t\tmeal_mutex;
+\tpthread_mutex_t\tdeath_mutex;
+\tpthread_mutex_t\tforks[2];
+\tt_philo\t\t\tphilos[2];
+};
+
+long long\tget_time_ms(void)
+{
+\tstruct timeval tv;
+\tgettimeofday(&tv, NULL);
+\treturn ((long long)tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
+void\tprecise_usleep(long long ms)
+{
+\tlong long s = get_time_ms();
+\twhile (get_time_ms() - s < ms)
+\t\tusleep(500);
+}
+
+int\tis_dead(t_data *d)
+{
+\tint r;
+\tpthread_mutex_lock(&d->death_mutex);
+\tr = d->someone_died;
+\tpthread_mutex_unlock(&d->death_mutex);
+\treturn (r);
+}
+
+void\tprint_status(t_philo *p, const char *msg)
+{
+\tif (is_dead(p->data))
+\t\treturn ;
+\tpthread_mutex_lock(&p->data->print_mutex);
+\tif (!is_dead(p->data))
+\t\tprintf("%lld %d %s\\n",
+\t\t\tget_time_ms() - p->data->start_time, p->id, msg);
+\tpthread_mutex_unlock(&p->data->print_mutex);
+}
+
+void\ttake_forks(t_philo *p)
+{
+\tif (p->id % 2 == 0)
+\t{
+\t\tpthread_mutex_lock(p->right_fork);
+\t\tprint_status(p, "has taken a fork");
+\t\tpthread_mutex_lock(p->left_fork);
+\t}
+\telse
+\t{
+\t\tpthread_mutex_lock(p->left_fork);
+\t\tprint_status(p, "has taken a fork");
+\t\tpthread_mutex_lock(p->right_fork);
+\t}
+\tprint_status(p, "has taken a fork");
+}
+
+void\t*philosopher(void *arg)
+{
+\tt_philo *p = (t_philo *)arg;
+\tif (p->id % 2 == 0)
+\t\tusleep(1000);
+\twhile (!is_dead(p->data))
+\t{
+\t\ttake_forks(p);
+\t\tprint_status(p, "is eating");
+\t\tpthread_mutex_lock(&p->data->meal_mutex);
+\t\tp->last_meal_time = get_time_ms();
+\t\tpthread_mutex_unlock(&p->data->meal_mutex);
+\t\tprecise_usleep(p->data->time_to_eat);
+\t\tpthread_mutex_unlock(p->left_fork);
+\t\tpthread_mutex_unlock(p->right_fork);
+\t\tif (is_dead(p->data))
+\t\t\tbreak ;
+\t\tprint_status(p, "is sleeping");
+\t\tprecise_usleep(p->data->time_to_sleep);
+\t\tprint_status(p, "is thinking");
+\t}
+\treturn (NULL);
+}
+
+void\tmonitor(t_data *d)
+{
+\tint\ti;
+
+\twhile (1)
+\t{
+\t\ti = 0;
+\t\twhile (i < 2)
+\t\t{
+\t\t\tpthread_mutex_lock(&d->meal_mutex);
+\t\t\tif (get_time_ms() - d->philos[i].last_meal_time > d->time_to_die)
+\t\t\t{
+\t\t\t\tpthread_mutex_unlock(&d->meal_mutex);
+\t\t\t\tpthread_mutex_lock(&d->print_mutex);
+\t\t\t\tprintf("%lld %d died\\n",
+\t\t\t\t\tget_time_ms() - d->start_time, d->philos[i].id);
+\t\t\t\tpthread_mutex_unlock(&d->print_mutex);
+\t\t\t\tpthread_mutex_lock(&d->death_mutex);
+\t\t\t\td->someone_died = 1;
+\t\t\t\tpthread_mutex_unlock(&d->death_mutex);
+\t\t\t\treturn ;
+\t\t\t}
+\t\t\tpthread_mutex_unlock(&d->meal_mutex);
+\t\t\ti++;
+\t\t}
+\t\tusleep(1000);
+\t}
+}
+
+int\tmain(void)
+{
+\tt_data\t\td;
+\tpthread_t\tthreads[2];
+\tint\t\t\ti;
+
+\td.time_to_die = 300;
+\td.time_to_eat = 200;
+\td.time_to_sleep = 200;
+\td.someone_died = 0;
+\tpthread_mutex_init(&d.print_mutex, NULL);
+\tpthread_mutex_init(&d.meal_mutex, NULL);
+\tpthread_mutex_init(&d.death_mutex, NULL);
+\tpthread_mutex_init(&d.forks[0], NULL);
+\tpthread_mutex_init(&d.forks[1], NULL);
+\td.start_time = get_time_ms();
+\td.philos[0] = (t_philo){1, d.start_time, &d.forks[0], &d.forks[1], &d};
+\td.philos[1] = (t_philo){2, d.start_time, &d.forks[1], &d.forks[0], &d};
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_create(&threads[i], NULL, philosopher, &d.philos[i]);
+\tmonitor(&d);
+\ti = -1;
+\twhile (++i < 2)
+\t\tpthread_join(threads[i], NULL);
+\tpthread_mutex_destroy(&d.print_mutex);
+\tpthread_mutex_destroy(&d.meal_mutex);
+\tpthread_mutex_destroy(&d.death_mutex);
+\tpthread_mutex_destroy(&d.forks[0]);
+\tpthread_mutex_destroy(&d.forks[1]);
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex08 ex08_monitor.c -lpthread && ./ex08"
+},
+// ─── Ex 9 ───
+{
+  title: "ft_atoi を実装する",
+  difficulty: 1,
+  filename: "ex09_atoi.c",
+  objective: "libft 禁止のため、引数パースに必要な ft_atoi を自作する。",
+  description: `<p>Philosophers 課題用の <code>ft_atoi</code> を実装せよ。</p>
+<p>要件:</p>
+<ul>
+  <li>先頭の空白をスキップ</li>
+  <li><code>+</code> または <code>-</code> を1つだけ許容</li>
+  <li>数字列を <code>int</code> に変換</li>
+  <li>不正な入力 (空文字列, 文字混入) は <code>-1</code> を返す</li>
+  <li>INT_MAX を超える値は <code>-1</code> を返す</li>
+  <li>負の値は <code>-1</code> を返す (この課題では全引数が正の整数)</li>
+</ul>
+<pre>テストケース:
+  "200"    -> 200
+  "  42"   -> 42
+  "+100"   -> 100
+  "-5"     -> -1 (負の値は不正)
+  "12ab"   -> -1 (文字混入)
+  ""       -> -1
+  "2147483648" -> -1 (INT_MAX超過)</pre>`,
+  expectedOutput: `"200" -> 200
+"  42" -> 42
+"+100" -> 100
+"-5" -> -1
+"12ab" -> -1
+"" -> -1
+"2147483648" -> -1`,
+  starterCode: `#include <stdio.h>
+#include <limits.h>
+
+int\tft_atoi_philo(const char *str)
+{
+\tlong\tresult;
+\tint\t\ti;
+
+\t// TODO: 先頭空白スキップ
+\t// TODO: + 符号の処理 (- は不正として -1 を返す)
+\t// TODO: 数字列を long に変換 (途中で非数字があれば -1)
+\t// TODO: INT_MAX 超過チェック
+\t// TODO: 数字が1文字もなければ -1
+\treturn (0);
+}
+
+int\tmain(void)
+{
+\tconst char *tests[] = {
+\t\t"200", "  42", "+100", "-5", "12ab", "", "2147483648", NULL
+\t};
+\tint\ti;
+
+\ti = 0;
+\twhile (tests[i])
+\t{
+\t\tprintf("\\"%s\\" -> %d\\n", tests[i], ft_atoi_philo(tests[i]));
+\t\ti++;
+\t}
+\treturn (0);
+}`,
+  hints: [
+    { label: "Hint 1: 空白スキップ", content: "<pre>while (str[i] == ' ' || (str[i] >= 9 && str[i] <= 13))\n    i++;</pre>" },
+    { label: "Hint 2: オーバーフロー検出", content: "long に変換して <code>result > INT_MAX</code> をチェックする。" }
+  ],
+  solution: `#include <stdio.h>
+#include <limits.h>
+
+int\tft_atoi_philo(const char *str)
+{
+\tlong\tresult;
+\tint\t\ti;
+\tint\t\thas_digit;
+
+\tresult = 0;
+\ti = 0;
+\thas_digit = 0;
+\twhile (str[i] == ' ' || (str[i] >= 9 && str[i] <= 13))
+\t\ti++;
+\tif (str[i] == '-')
+\t\treturn (-1);
+\tif (str[i] == '+')
+\t\ti++;
+\twhile (str[i] >= '0' && str[i] <= '9')
+\t{
+\t\tresult = result * 10 + (str[i] - '0');
+\t\tif (result > INT_MAX)
+\t\t\treturn (-1);
+\t\thas_digit = 1;
+\t\ti++;
+\t}
+\tif (!has_digit || str[i] != '\\0')
+\t\treturn (-1);
+\treturn ((int)result);
+}
+
+int\tmain(void)
+{
+\tconst char *tests[] = {
+\t\t"200", "  42", "+100", "-5", "12ab", "", "2147483648", NULL
+\t};
+\tint\ti;
+
+\ti = 0;
+\twhile (tests[i])
+\t{
+\t\tprintf("\\"%s\\" -> %d\\n", tests[i], ft_atoi_philo(tests[i]));
+\t\ti++;
+\t}
+\treturn (0);
+}`,
+  compileCmd: "cc -Wall -Wextra -Werror -o ex09 ex09_atoi.c && ./ex09"
+}
+];
+
+// =========================================================================
+//  STATE
+// =========================================================================
+const S = {
+  current: 0,
+  done: {},
+  editorContent: {},
+  load() {
+    try {
+      this.done = JSON.parse(localStorage.getItem('philo_code_done') || '{}');
+      this.editorContent = JSON.parse(localStorage.getItem('philo_code_editors') || '{}');
+    } catch(e) {}
+  },
+  save() {
+    localStorage.setItem('philo_code_done', JSON.stringify(this.done));
+    localStorage.setItem('philo_code_editors', JSON.stringify(this.editorContent));
+  },
+  markDone(i) { this.done[i] = true; this.save(); updateNav(); },
+  isDone(i) { return !!this.done[i]; },
+  saveCode(i, code) { this.editorContent[i] = code; this.save(); },
+  getCode(i) { return this.editorContent[i] || EX[i].starterCode; },
+  reset() { this.done = {}; this.editorContent = {}; this.save(); buildAll(); }
+};
+S.load();
+
+// =========================================================================
+//  BUILD UI
+// =========================================================================
+function buildAll() {
+  buildNav();
+  buildExercises();
+  showEx(S.current);
+  updateNav();
+}
+
+function buildNav() {
+  const ul = document.getElementById('nav-list');
+  ul.innerHTML = '';
+  EX.forEach((ex, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<a href="#" data-i="${i}">
+      <span class="step-num ${S.isDone(i)?'done':''}" id="sn-${i}">${i}</span>
+      <span class="step-title">${ex.title}</span>
+      <span class="diff S${ex.difficulty}">${['','EASY','MED','HARD'][ex.difficulty]}</span>
+    </a>`;
+    li.querySelector('a').onclick = e => { e.preventDefault(); showEx(i); document.querySelector('nav').classList.remove('open'); };
+    ul.appendChild(li);
+  });
+  const sep = document.createElement('li');
+  sep.innerHTML = '<a href="#" style="color:var(--red);font-size:12px" id="reset-link">Reset All</a>';
+  sep.querySelector('a').onclick = e => { e.preventDefault(); if(confirm('全進捗とコードをリセットしますか？')) S.reset(); };
+  ul.appendChild(sep);
+}
+
+function buildExercises() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  EX.forEach((ex, i) => {
+    const div = document.createElement('div');
+    div.className = 'exercise';
+    div.id = `ex-${i}`;
+    div.innerHTML = `
+      <div class="exercise-top">
+        <div class="breadcrumb">Exercise ${i} / ${EX.length - 1}</div>
+        <h2><span class="ex-num">Ex${String(i).padStart(2,'0')}</span> ${ex.title}</h2>
+        <div class="objective"><b>Goal:</b> ${ex.objective}</div>
+        <div class="desc">${ex.description}</div>
+        <div class="expected-output">
+          <h4>Expected Output</h4>
+          <pre>${ex.expectedOutput}</pre>
+        </div>
+      </div>
+      <div class="editor-area">
+        <div class="editor-toolbar">
+          <span class="filename">${ex.filename}</span>
+          <div class="toolbar-spacer"></div>
+          <button class="toolbar-btn hint-btn" onclick="togglePanel(${i},'hints')">Hints</button>
+          <button class="toolbar-btn" onclick="togglePanel(${i},'compile')">Compile Cmd</button>
+          <button class="toolbar-btn" onclick="togglePanel(${i},'solution')">Solution</button>
+          <button class="toolbar-btn" onclick="copyCode(${i})">Copy Code</button>
+          <button class="toolbar-btn primary done-btn" onclick="markDone(${i})">Done</button>
+        </div>
+        <div class="editor-container">
+          <div class="line-numbers" id="ln-${i}"></div>
+          <textarea class="code-editor" id="editor-${i}" spellcheck="false"
+            oninput="onEdit(${i})" onscroll="syncScroll(${i})">${escHtml(S.getCode(i))}</textarea>
+        </div>
+        <div class="panel" id="hints-${i}">
+          <h4 style="color:var(--orange)">Hints (click to reveal)</h4>
+          ${ex.hints.map((h,j) => `<div class="hint-item" onclick="this.classList.toggle('open')">
+            <div class="hint-label">${h.label}</div>
+            <div class="hint-content">${h.content}</div>
+          </div>`).join('')}
+        </div>
+        <div class="panel" id="compile-${i}">
+          <h4 style="color:var(--cyan)">Compile & Run</h4>
+          <p style="font-size:13px;color:var(--text2);margin:4px 0 8px">コードをファイルに保存して以下を実行:</p>
+          <div class="compile-box">
+            <code>${escHtml(ex.compileCmd)}</code>
+            <button onclick="copyText('${escAttr(ex.compileCmd)}')">Copy</button>
+          </div>
+        </div>
+        <div class="panel" id="solution-${i}">
+          <h4 style="color:var(--green)">Solution</h4>
+          <div class="solution-code">
+            <button class="copy-btn" onclick="copySolution(${i})">Copy</button>
+            <pre>${escHtml(ex.solution)}</pre>
+          </div>
+        </div>
+      </div>
+      <div class="nav-buttons">
+        ${i > 0 ? `<button class="nav-btn" onclick="showEx(${i-1})">Prev</button>` : ''}
+        ${i < EX.length-1 ? `<button class="nav-btn next" onclick="showEx(${i+1})">Next Exercise</button>` : '<span class="nav-btn done-btn" style="margin-left:auto">All exercises complete!</span>'}
+      </div>`;
+    main.appendChild(div);
+    setTimeout(() => updateLineNumbers(i), 0);
+  });
+}
+
+function showEx(i) {
+  S.current = i;
+  document.querySelectorAll('.exercise').forEach((el, j) => el.classList.toggle('active', j === i));
+  document.querySelectorAll('nav li a').forEach((a, j) => a.classList.toggle('active', j === i));
+  updateLineNumbers(i);
+  window.scrollTo(0, 0);
+}
+
+function updateNav() {
+  const total = EX.length;
+  const done = Object.keys(S.done).length;
+  document.getElementById('pl').textContent = `${done} / ${total}`;
+  document.getElementById('pf').style.width = `${(done/total*100).toFixed(0)}%`;
+  EX.forEach((_, i) => {
+    const sn = document.getElementById(`sn-${i}`);
+    if (sn) sn.classList.toggle('done', S.isDone(i));
+  });
+}
+
+// =========================================================================
+//  EDITOR
+// =========================================================================
+function onEdit(i) {
+  const editor = document.getElementById(`editor-${i}`);
+  S.saveCode(i, editor.value);
+  updateLineNumbers(i);
+}
+
+function updateLineNumbers(i) {
+  const editor = document.getElementById(`editor-${i}`);
+  const ln = document.getElementById(`ln-${i}`);
+  if (!editor || !ln) return;
+  const lines = editor.value.split('\n').length;
+  ln.innerHTML = Array.from({length: lines}, (_, j) => `<div>${j+1}</div>`).join('');
+}
+
+function syncScroll(i) {
+  const editor = document.getElementById(`editor-${i}`);
+  const ln = document.getElementById(`ln-${i}`);
+  if (ln) ln.style.transform = `translateY(-${editor.scrollTop}px)`;
+}
+
+function togglePanel(i, name) {
+  const panel = document.getElementById(`${name}-${i}`);
+  ['hints','compile','solution'].forEach(n => {
+    const p = document.getElementById(`${n}-${i}`);
+    if (p && n !== name) p.classList.remove('visible');
+  });
+  panel.classList.toggle('visible');
+}
+
+function copyCode(i) {
+  const editor = document.getElementById(`editor-${i}`);
+  navigator.clipboard.writeText(editor.value).then(() => notify('Copied!'));
+}
+
+function copySolution(i) {
+  navigator.clipboard.writeText(EX[i].solution).then(() => notify('Solution copied!'));
+}
+
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(() => notify('Copied!'));
+}
+
+function markDone(i) {
+  S.markDone(i);
+  if (i < EX.length - 1) showEx(i + 1);
+}
+
+function notify(msg) {
+  const d = document.createElement('div');
+  d.textContent = msg;
+  Object.assign(d.style, {
+    position:'fixed',bottom:'20px',right:'20px',background:'var(--green)',color:'#000',
+    padding:'8px 20px',borderRadius:'8px',fontWeight:'600',fontSize:'14px',zIndex:'999',
+    animation:'fadeIn .2s'
+  });
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 1500);
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// Tab support in textarea
+document.addEventListener('keydown', e => {
+  if (e.target.classList.contains('code-editor') && e.key === 'Tab') {
+    e.preventDefault();
+    const t = e.target, s = t.selectionStart, end = t.selectionEnd;
+    t.value = t.value.substring(0, s) + '\t' + t.value.substring(end);
+    t.selectionStart = t.selectionEnd = s + 1;
+    const i = parseInt(t.id.split('-')[1]);
+    S.saveCode(i, t.value);
+    updateLineNumbers(i);
+  }
+});
+
+buildAll();
+</script>
+</body>
+</html>
