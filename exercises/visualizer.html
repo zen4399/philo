@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Philosophers ビジュアライザー</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--card:#1c2333;--border:#30363d;
+  --text:#e6edf3;--muted:#7d8590;--accent:#58a6ff;
+  --danger:#f85149;--warn:#d29922;--success:#3fb950;--purple:#bc8cff;
+  --thinking:#42a5f5;--hungry:#ffa726;--hasfork:#ffee58;
+  --eating:#66bb6a;--sleeping:#ab47bc;--dead:#ef5350;
+  --fork-free:#546e7a;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px}
+header h1{font-size:1.4rem;font-weight:700}
+header h1 span{color:var(--accent)}
+header p{color:var(--muted);font-size:.85rem}
+.container{display:flex;height:calc(100vh - 60px);overflow:hidden}
+.sidebar{width:300px;min-width:300px;background:var(--bg2);border-right:1px solid var(--border);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.sidebar h3{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.scenario-btn{display:block;width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;text-align:left;font-size:.85rem;transition:.15s}
+.scenario-btn:hover{border-color:var(--accent)}
+.scenario-btn.active{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.scenario-btn .label{font-weight:600;margin-bottom:2px}
+.scenario-btn .desc{color:var(--muted);font-size:.75rem;line-height:1.3}
+.params{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.param-group{display:flex;flex-direction:column;gap:2px}
+.param-group label{font-size:.7rem;color:var(--muted)}
+.param-group input,.param-group select{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--text);font-size:.8rem;width:100%}
+.param-group input:focus,.param-group select:focus{outline:none;border-color:var(--accent)}
+.param-full{grid-column:1/-1}
+.controls{display:flex;gap:6px;flex-wrap:wrap}
+.ctrl-btn{padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:.85rem;transition:.15s;flex:1;text-align:center;min-width:60px}
+.ctrl-btn:hover{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.ctrl-btn.playing{background:rgba(63,185,80,.12);border-color:var(--success);color:var(--success)}
+.speed-control{display:flex;align-items:center;gap:8px}
+.speed-control label{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.speed-control input[type=range]{flex:1;accent-color:var(--accent)}
+.speed-control span{font-size:.75rem;color:var(--text);min-width:30px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.info-box{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:.78rem;line-height:1.5;color:var(--muted)}
+.info-box strong{color:var(--text)}
+.viz-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.table-view{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:300px;background:radial-gradient(ellipse at center,rgba(88,166,255,.03) 0%,transparent 70%)}
+#table-svg{width:100%;height:100%;max-width:600px;max-height:600px}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10;opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.visible{opacity:1;pointer-events:auto}
+.overlay-box{background:var(--card);border:2px solid var(--danger);border-radius:12px;padding:24px 32px;text-align:center;max-width:400px}
+.overlay-box h2{font-size:1.3rem;margin-bottom:8px}
+.overlay-box p{color:var(--muted);font-size:.85rem;line-height:1.5;margin-bottom:6px}
+.overlay-box button{margin-top:12px;padding:8px 24px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:.85rem}
+.bottom-panel{display:flex;border-top:1px solid var(--border);height:220px;min-height:180px}
+.timeline-section{flex:2;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+.timeline-header{padding:6px 12px;font-size:.75rem;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.timeline-wrap{flex:1;overflow:hidden;position:relative}
+#timeline-canvas{display:block;width:100%;height:100%}
+.log-section{flex:1;display:flex;flex-direction:column;min-width:260px}
+.log-header{padding:6px 12px;font-size:.75rem;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.log-entries{flex:1;overflow-y:auto;padding:4px 0;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.72rem}
+.log-entry{padding:2px 12px;display:flex;gap:8px;border-bottom:1px solid rgba(48,54,61,.3)}
+.log-entry:hover{background:rgba(88,166,255,.04)}
+.log-time{color:var(--muted);min-width:55px;text-align:right}
+.log-philo{min-width:20px;font-weight:600}
+.log-action{color:var(--muted)}
+.log-entries::-webkit-scrollbar{width:6px}
+.log-entries::-webkit-scrollbar-track{background:var(--bg)}
+.log-entries::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:900px){
+  .container{flex-direction:column;height:auto}
+  .sidebar{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;max-height:none;border-right:none;border-bottom:1px solid var(--border)}
+  .bottom-panel{flex-direction:column;height:auto}
+  .timeline-section{border-right:none;border-bottom:1px solid var(--border);min-height:150px}
+  .log-section{min-height:200px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Philosophers <span>ビジュアライザー</span></h1>
+  <p>スレッドの並行処理・デッドロック・死亡検出をアニメーションで理解する</p>
+</header>
+<div class="container">
+  <aside class="sidebar">
+    <div>
+      <h3>シナリオ</h3>
+      <div style="display:flex;flex-direction:column;gap:6px" id="scenario-list"></div>
+    </div>
+    <div>
+      <h3>パラメータ</h3>
+      <div class="params">
+        <div class="param-group"><label>哲学者数</label><input type="number" id="p-num" min="1" max="12" value="5"></div>
+        <div class="param-group"><label>戦略</label><select id="p-strategy"><option value="naive">ナイーブ（全員左優先）</option><option value="even_odd">偶奇戦略</option></select></div>
+        <div class="param-group"><label>time_to_eat (ms)</label><input type="number" id="p-eat" min="50" max="2000" step="50" value="200"></div>
+        <div class="param-group"><label>time_to_sleep (ms)</label><input type="number" id="p-sleep" min="50" max="2000" step="50" value="100"></div>
+        <div class="param-group"><label>time_to_die (ms)</label><input type="number" id="p-die" min="50" max="5000" step="50" value="800"></div>
+        <div class="param-group"><label>think_time (ms)</label><input type="number" id="p-think" min="0" max="2000" step="50" value="0"></div>
+      </div>
+    </div>
+    <div>
+      <h3>操作</h3>
+      <div class="controls">
+        <button class="ctrl-btn" id="btn-play">▶ 再生</button>
+        <button class="ctrl-btn" id="btn-step">⏭ 1ステップ</button>
+        <button class="ctrl-btn" id="btn-reset">↻ リセット</button>
+      </div>
+      <div class="speed-control" style="margin-top:8px">
+        <label>速度:</label>
+        <input type="range" id="speed-slider" min="1" max="30" value="8">
+        <span id="speed-val">8x</span>
+      </div>
+    </div>
+    <div>
+      <h3>凡例</h3>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--thinking)"></div>思考</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--hungry)"></div>空腹</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--hasfork)"></div>フォーク待ち</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--eating)"></div>食事</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--sleeping)"></div>睡眠</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--dead)"></div>死亡</div>
+      </div>
+    </div>
+    <div id="info-panel" class="info-box" style="display:none"></div>
+  </aside>
+  <div class="viz-area">
+    <div class="table-view">
+      <svg id="table-svg" viewBox="0 0 500 500"></svg>
+      <div class="overlay" id="overlay">
+        <div class="overlay-box" id="overlay-box"></div>
+      </div>
+    </div>
+    <div class="bottom-panel">
+      <div class="timeline-section">
+        <div class="timeline-header"><span>タイムライン</span><span id="time-display">0 ms</span></div>
+        <div class="timeline-wrap"><canvas id="timeline-canvas"></canvas></div>
+      </div>
+      <div class="log-section">
+        <div class="log-header"><span>イベントログ</span><span id="log-count">0</span></div>
+        <div class="log-entries" id="log-entries"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Constants =====
+const S = { THINKING:0, HUNGRY:1, HAS_FIRST:2, EATING:3, SLEEPING:4, DEAD:5 };
+const S_NAMES = ['思考中','空腹','フォーク待ち','食事中','睡眠中','死亡'];
+const S_COLORS = ['#42a5f5','#ffa726','#ffee58','#66bb6a','#ab47bc','#ef5350'];
+const S_LOG = ['is thinking','is hungry','has taken a fork','is eating','is sleeping','died'];
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const SCENARIOS = [
+  { id:'deadlock', label:'デッドロック体験', icon:'🔴',
+    desc:'全員が左フォークを先に取る。全員が1本持った瞬間、右フォークは隣人が持っていて誰も進めない ー これが循環待ちです。',
+    num:5, eat:200, sleep:100, die:800, strategy:'naive', think:0 },
+  { id:'even_odd', label:'偶奇戦略（解決）', icon:'🟢',
+    desc:'偶数番は左→右、奇数番は右→左の順でフォークを取得。取得順を交互にすることで循環待ちを破り、デッドロックを完全に防ぎます。',
+    num:5, eat:200, sleep:100, die:800, strategy:'even_odd', think:0 },
+  { id:'death', label:'死亡検出', icon:'💀',
+    desc:'time_to_die が厳しい設定。フォークの待ち時間が長すぎると食事できずに死亡します。モニタースレッドの重要性を体感できます。',
+    num:3, eat:200, sleep:200, die:310, strategy:'even_odd', think:0 },
+  { id:'solo', label:'1人の哲学者', icon:'👤',
+    desc:'フォークが1本しかない。食事には2本必要なので、永遠に食事できず必ず死亡します。この特殊ケースの処理が必須です。',
+    num:1, eat:200, sleep:100, die:400, strategy:'naive', think:0 },
+];
+
+// ===== Simulation =====
+class Simulation {
+  constructor(cfg) {
+    this.n = cfg.num;
+    this.eatMs = cfg.eat;
+    this.sleepMs = cfg.sleep;
+    this.dieMs = cfg.die;
+    this.thinkMs = cfg.think;
+    this.strategy = cfg.strategy;
+    this.tickMs = 50;
+    this.philos = [];
+    this.forks = [];
+    this.time = 0;
+    this.deadlocked = false;
+    this.dead = false;
+    this.finished = false;
+    this.events = [];
+    this.timeline = [];
+    this.eventCb = null;
+  }
+
+  init() {
+    this.time = 0;
+    this.deadlocked = false;
+    this.dead = false;
+    this.finished = false;
+    this.events = [];
+    this.timeline = [];
+
+    this.forks = Array.from({length:this.n}, (_,i) => ({id:i, heldBy:-1}));
+    this.philos = Array.from({length:this.n}, (_,i) => {
+      const p = {
+        id:i, state:S.THINKING,
+        leftFork:i, rightFork:(i+1)%this.n,
+        firstFork:-1, secondFork:-1,
+        hasFirst:false, hasSecond:false,
+        timer:0, lastMeal:0, meals:0, hp:1
+      };
+      if (this.strategy === 'naive') {
+        p.firstFork = p.leftFork;
+        p.secondFork = p.rightFork;
+      } else {
+        p.firstFork = i%2===0 ? p.leftFork : p.rightFork;
+        p.secondFork = i%2===0 ? p.rightFork : p.leftFork;
+      }
+      // Stagger start: odd philos delay 1 tick in even_odd strategy
+      if (this.strategy === 'even_odd' && i%2===1) p.timer = 1;
+      // Custom think time
+      if (this.thinkMs > 0) p.timer = Math.max(p.timer, Math.ceil(this.thinkMs / this.tickMs));
+      return p;
+    });
+  }
+
+  tick() {
+    if (this.finished) return false;
+    this.time += this.tickMs;
+
+    // Check deaths first (like monitor thread)
+    for (const p of this.philos) {
+      if (p.state === S.DEAD) continue;
+      if (this.time - p.lastMeal > this.dieMs) {
+        p.state = S.DEAD;
+        p.hp = 0;
+        this.dead = true;
+        this.finished = true;
+        this._ev(p.id, S.DEAD);
+        this.timeline.push(this.philos.map(q => q.state));
+        return true;
+      }
+      p.hp = 1 - (this.time - p.lastMeal) / this.dieMs;
+    }
+
+    for (const p of this.philos) {
+      if (p.state === S.DEAD) continue;
+      switch (p.state) {
+        case S.THINKING:
+          p.timer--;
+          if (p.timer <= 0) { p.state = S.HUNGRY; this._ev(p.id, S.HUNGRY); }
+          break;
+        case S.HUNGRY:
+          if (this.forks[p.firstFork].heldBy === -1) {
+            this.forks[p.firstFork].heldBy = p.id;
+            p.hasFirst = true;
+            p.state = S.HAS_FIRST;
+            this._ev(p.id, S.HAS_FIRST, p.firstFork);
+          }
+          break;
+        case S.HAS_FIRST:
+          if (this.forks[p.secondFork].heldBy === -1) {
+            this.forks[p.secondFork].heldBy = p.id;
+            p.hasSecond = true;
+            this._ev(p.id, S.HAS_FIRST, p.secondFork);
+            p.state = S.EATING;
+            p.timer = Math.ceil(this.eatMs / this.tickMs);
+            p.lastMeal = this.time;
+            p.meals++;
+            this._ev(p.id, S.EATING);
+          }
+          break;
+        case S.EATING:
+          p.timer--;
+          if (p.timer <= 0) {
+            this.forks[p.firstFork].heldBy = -1;
+            this.forks[p.secondFork].heldBy = -1;
+            p.hasFirst = false;
+            p.hasSecond = false;
+            p.state = S.SLEEPING;
+            p.timer = Math.ceil(this.sleepMs / this.tickMs);
+            this._ev(p.id, S.SLEEPING);
+          }
+          break;
+        case S.SLEEPING:
+          p.timer--;
+          if (p.timer <= 0) {
+            const tt = this.thinkMs > 0 ? Math.ceil(this.thinkMs / this.tickMs) : 0;
+            if (tt > 0) {
+              p.state = S.THINKING;
+              p.timer = tt;
+              this._ev(p.id, S.THINKING);
+            } else {
+              p.state = S.HUNGRY;
+              this._ev(p.id, S.HUNGRY);
+            }
+          }
+          break;
+      }
+    }
+
+    // Check deadlock
+    const alive = this.philos.filter(p => p.state !== S.DEAD);
+    if (alive.length > 0) {
+      const blocked = alive.every(p => p.state === S.HUNGRY || p.state === S.HAS_FIRST);
+      if (blocked) {
+        const canProgress = alive.some(p => {
+          const fid = p.state === S.HUNGRY ? p.firstFork : p.secondFork;
+          return this.forks[fid].heldBy === -1;
+        });
+        if (!canProgress) {
+          this.deadlocked = true;
+          this.finished = true;
+        }
+      }
+    }
+
+    this.timeline.push(this.philos.map(q => q.state));
+
+    // Auto-stop after 15 seconds of simulation time
+    if (this.time > 15000) this.finished = true;
+    return true;
+  }
+
+  _ev(pid, state, forkId) {
+    const e = { time:this.time, pid, state, forkId };
+    this.events.push(e);
+    if (this.eventCb) this.eventCb(e);
+  }
+}
+
+// ===== Renderer =====
+const svg = document.getElementById('table-svg');
+const CX = 250, CY = 250;
+
+let philoEls = [], forkEls = [], healthArcs = [], stateLabels = [], dlArrows = [];
+let sim = null, animId = null, playing = false, speed = 8, lastEvent = 0;
+
+function clearSVG() {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  philoEls = []; forkEls = []; healthArcs = []; stateLabels = []; dlArrows = [];
+}
+
+function buildSVG() {
+  clearSVG();
+  const n = sim.n;
+  const tableR = n === 1 ? 0 : Math.min(70, 50 + n * 4);
+  const philoR = n === 1 ? 0 : Math.min(170, 120 + n * 10);
+  const forkRestR = n === 1 ? 70 : (tableR + philoR) / 2;
+
+  // Defs
+  const defs = cEl('defs');
+  const marker = cEl('marker', {id:'ah', viewBox:'0 0 10 10', refX:8, refY:5, markerWidth:6, markerHeight:6, orient:'auto-start-reverse'});
+  const path = cEl('path', {d:'M 0 0 L 10 5 L 0 10 z', fill:'var(--danger)'});
+  marker.appendChild(path);
+  defs.appendChild(marker);
+  // Glow filter
+  const filter = cEl('filter', {id:'glow'});
+  const blur = cEl('feGaussianBlur', {stdDeviation:'3', result:'g'});
+  const merge = cEl('feMerge');
+  const m1 = cEl('feMergeNode', {'in':'g'});
+  const m2 = cEl('feMergeNode', {'in':'SourceGraphic'});
+  merge.appendChild(m1); merge.appendChild(m2);
+  filter.appendChild(blur); filter.appendChild(merge);
+  defs.appendChild(filter);
+  svg.appendChild(defs);
+
+  // Table circle
+  if (n > 1) {
+    const table = cEl('circle', {cx:CX, cy:CY, r:tableR, fill:'rgba(30,40,60,.5)', stroke:'#2a3a5a', 'stroke-width':2});
+    svg.appendChild(table);
+    // Table label
+    const tl = cEl('text', {x:CX, y:CY, fill:'#3a4a6a', 'font-size':12, 'text-anchor':'middle', 'dominant-baseline':'central'});
+    tl.textContent = 'TABLE';
+    svg.appendChild(tl);
+  }
+
+  // Forks (drawn first, behind philosophers)
+  for (let i = 0; i < n; i++) {
+    const a = forkAngle(i, n);
+    const rx = CX + forkRestR * Math.cos(a);
+    const ry = CY + forkRestR * Math.sin(a);
+
+    const g = cEl('g');
+    g.style.transition = 'transform .25s ease-out';
+    g.dataset.restX = rx;
+    g.dataset.restY = ry;
+
+    // Fork shape (small diamond)
+    const rect = cEl('rect', {x:-7, y:-7, width:14, height:14, rx:2, fill:'var(--fork-free)', transform:'rotate(45)'});
+    g.appendChild(rect);
+    const label = cEl('text', {x:0, y:1, fill:'#fff', 'font-size':8, 'font-weight':700, 'text-anchor':'middle', 'dominant-baseline':'central'});
+    label.textContent = i;
+    g.appendChild(label);
+
+    g.style.transform = `translate(${rx}px, ${ry}px)`;
+    svg.appendChild(g);
+    forkEls.push({g, rect, restX:rx, restY:ry});
+  }
+
+  // Philosophers
+  for (let i = 0; i < n; i++) {
+    const a = philoAngle(i, n);
+    const px = n === 1 ? CX : CX + philoR * Math.cos(a);
+    const py = n === 1 ? CY : CY + philoR * Math.sin(a);
+
+    const g = cEl('g');
+
+    // Health arc (background)
+    const harc = cEl('circle', {cx:0, cy:0, r:30, fill:'none', stroke:S_COLORS[S.EATING], 'stroke-width':3, 'stroke-dasharray':`${2*Math.PI*30} ${2*Math.PI*30}`, 'stroke-dashoffset':0, 'stroke-linecap':'round', opacity:.4, transform:'rotate(-90)'});
+    g.appendChild(harc);
+
+    // Outer ring
+    const ring = cEl('circle', {cx:0, cy:0, r:27, fill:'none', stroke:S_COLORS[0], 'stroke-width':3.5});
+    ring.style.transition = 'stroke .2s';
+    g.appendChild(ring);
+
+    // Inner circle
+    const inner = cEl('circle', {cx:0, cy:0, r:23, fill:'#1a1a2e'});
+    g.appendChild(inner);
+
+    // ID
+    const txt = cEl('text', {x:0, y:-2, fill:'#fff', 'font-size':16, 'font-weight':700, 'text-anchor':'middle', 'dominant-baseline':'central'});
+    txt.textContent = i;
+    g.appendChild(txt);
+
+    // State label
+    const sl = cEl('text', {x:0, y:14, fill:S_COLORS[0], 'font-size':8, 'text-anchor':'middle', 'dominant-baseline':'central'});
+    sl.textContent = S_NAMES[0];
+    g.appendChild(sl);
+
+    g.style.transform = `translate(${px}px, ${py}px)`;
+    svg.appendChild(g);
+    philoEls.push({g, ring, inner, harc, px, py});
+    healthArcs.push(harc);
+    stateLabels.push(sl);
+
+    // Fork order arrows (for even/odd)
+    if (sim.strategy === 'even_odd' && n > 1) {
+      const order = cEl('text', {x:0, y:44, fill:'var(--muted)', 'font-size':7, 'text-anchor':'middle'});
+      order.textContent = i%2===0 ? 'L→R' : 'R→L';
+      g.appendChild(order);
+    }
+  }
+}
+
+function philoAngle(i, n) { return (i / n) * 2 * Math.PI - Math.PI / 2; }
+function forkAngle(i, n) { return ((i + 0.5) / n) * 2 * Math.PI - Math.PI / 2; }
+
+function cEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function updateSVG() {
+  const n = sim.n;
+  const philoR = n === 1 ? 0 : Math.min(170, 120 + n * 10);
+
+  // Update philosophers
+  for (let i = 0; i < n; i++) {
+    const p = sim.philos[i];
+    const el = philoEls[i];
+    const color = S_COLORS[p.state];
+
+    el.ring.setAttribute('stroke', color);
+    stateLabels[i].textContent = S_NAMES[p.state];
+    stateLabels[i].setAttribute('fill', color);
+
+    // Health arc
+    const circ = 2 * Math.PI * 30;
+    const hp = Math.max(0, Math.min(1, p.hp));
+    el.harc.setAttribute('stroke-dashoffset', circ * (1 - hp));
+    el.harc.setAttribute('stroke', hp > .5 ? '#66bb6a' : hp > .25 ? '#ffca28' : '#ef5350');
+    el.harc.setAttribute('opacity', p.state === S.DEAD ? 0 : .4);
+
+    // Dead effect
+    el.inner.setAttribute('fill', p.state === S.DEAD ? '#2a1515' : '#1a1a2e');
+    if (p.state === S.EATING) {
+      el.g.setAttribute('filter', 'url(#glow)');
+    } else {
+      el.g.removeAttribute('filter');
+    }
+  }
+
+  // Update forks
+  for (let i = 0; i < n; i++) {
+    const fork = sim.forks[i];
+    const el = forkEls[i];
+
+    if (fork.heldBy >= 0) {
+      const pe = philoEls[fork.heldBy];
+      // Move fork toward holder
+      const dx = pe.px - el.restX;
+      const dy = pe.py - el.restY;
+      const tx = el.restX + dx * .55;
+      const ty = el.restY + dy * .55;
+      el.g.style.transform = `translate(${tx}px, ${ty}px)`;
+      el.rect.setAttribute('fill', S_COLORS[sim.philos[fork.heldBy].state]);
+    } else {
+      el.g.style.transform = `translate(${el.restX}px, ${el.restY}px)`;
+      el.rect.setAttribute('fill', 'var(--fork-free)');
+    }
+  }
+
+  // Deadlock arrows
+  dlArrows.forEach(a => a.remove());
+  dlArrows = [];
+  if (sim.deadlocked && n > 1) {
+    for (let i = 0; i < n; i++) {
+      const p = sim.philos[i];
+      const wantedFork = p.state === S.HAS_FIRST ? p.secondFork : p.firstFork;
+      const holder = sim.forks[wantedFork].heldBy;
+      if (holder >= 0 && holder !== i) {
+        const from = philoEls[i];
+        const to = philoEls[holder];
+        const arrow = cEl('line', {
+          x1:from.px, y1:from.py, x2:to.px, y2:to.py,
+          stroke:'var(--danger)', 'stroke-width':2, 'stroke-dasharray':'6,4',
+          'marker-end':'url(#ah)', opacity:.8
+        });
+        svg.appendChild(arrow);
+        dlArrows.push(arrow);
+      }
+    }
+  }
+
+  // Time display
+  document.getElementById('time-display').textContent = sim.time + ' ms';
+}
+
+// ===== Timeline =====
+const timelineCanvas = document.getElementById('timeline-canvas');
+const tlCtx = timelineCanvas.getContext('2d');
+const TL_ROW = 24;
+const TL_COL = 3;
+
+function resizeTimeline() {
+  const wrap = timelineCanvas.parentElement;
+  timelineCanvas.width = wrap.clientWidth;
+  timelineCanvas.height = wrap.clientHeight;
+}
+
+function drawTimeline() {
+  if (!sim) return;
+  const w = timelineCanvas.width;
+  const h = timelineCanvas.height;
+  const n = sim.n;
+  const rowH = Math.min(TL_ROW, Math.floor(h / n));
+  const maxCols = Math.floor(w / TL_COL);
+  const start = Math.max(0, sim.timeline.length - maxCols);
+  const labelW = 28;
+
+  tlCtx.clearRect(0, 0, w, h);
+
+  // Background and grid lines
+  tlCtx.fillStyle = '#0d1117';
+  tlCtx.fillRect(0, 0, w, h);
+  for (let p = 0; p < n; p++) {
+    if (p > 0) {
+      tlCtx.strokeStyle = '#1c2333';
+      tlCtx.lineWidth = 1;
+      tlCtx.beginPath();
+      tlCtx.moveTo(0, p * rowH);
+      tlCtx.lineTo(w, p * rowH);
+      tlCtx.stroke();
+    }
+  }
+
+  // Labels
+  tlCtx.font = '10px monospace';
+  tlCtx.textBaseline = 'middle';
+  for (let p = 0; p < n; p++) {
+    tlCtx.fillStyle = '#7d8590';
+    tlCtx.fillText(`P${p}`, 4, p * rowH + rowH / 2);
+  }
+
+  // Bars
+  for (let t = start; t < sim.timeline.length; t++) {
+    const x = labelW + (t - start) * TL_COL;
+    if (x > w) break;
+    const states = sim.timeline[t];
+    for (let p = 0; p < n; p++) {
+      tlCtx.fillStyle = S_COLORS[states[p]];
+      tlCtx.fillRect(x, p * rowH + 2, TL_COL - 1, rowH - 4);
+    }
+  }
+
+  // Time ticks
+  tlCtx.fillStyle = '#7d8590';
+  tlCtx.font = '8px monospace';
+  const tickInterval = Math.ceil(500 / sim.tickMs); // every 500ms
+  for (let t = start; t < sim.timeline.length; t++) {
+    if ((t + 1) % tickInterval === 0) {
+      const x = labelW + (t - start) * TL_COL;
+      const ms = (t + 1) * sim.tickMs;
+      tlCtx.fillText(ms + '', x, n * rowH + 10);
+    }
+  }
+}
+
+// ===== Event Log =====
+const logEl = document.getElementById('log-entries');
+const logCountEl = document.getElementById('log-count');
+let logIdx = 0;
+
+function clearLog() {
+  logEl.innerHTML = '';
+  logIdx = 0;
+  logCountEl.textContent = '0';
+}
+
+function addLogEntry(e) {
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+
+  const timeSpan = document.createElement('span');
+  timeSpan.className = 'log-time';
+  timeSpan.textContent = String(e.time).padStart(5);
+
+  const philoSpan = document.createElement('span');
+  philoSpan.className = 'log-philo';
+  philoSpan.style.color = S_COLORS[e.state];
+  philoSpan.textContent = e.pid;
+
+  const actionSpan = document.createElement('span');
+  actionSpan.className = 'log-action';
+  if (e.state === S.HAS_FIRST && e.forkId !== undefined) {
+    actionSpan.textContent = `has taken fork ${e.forkId}`;
+  } else {
+    actionSpan.textContent = S_LOG[e.state];
+  }
+
+  div.appendChild(timeSpan);
+  div.appendChild(philoSpan);
+  div.appendChild(actionSpan);
+  logEl.appendChild(div);
+
+  logIdx++;
+  logCountEl.textContent = logIdx;
+
+  // Keep log bounded
+  while (logEl.children.length > 500) logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ===== Overlays =====
+const overlayEl = document.getElementById('overlay');
+const overlayBox = document.getElementById('overlay-box');
+
+function showOverlay(title, lines) {
+  overlayBox.innerHTML = `<h2>${title}</h2>` +
+    lines.map(l => `<p>${l}</p>`).join('') +
+    `<button onclick="hideOverlay()">閉じる</button>`;
+  overlayEl.classList.add('visible');
+}
+
+function hideOverlay() { overlayEl.classList.remove('visible'); }
+window.hideOverlay = hideOverlay;
+
+// ===== Controls =====
+const btnPlay = document.getElementById('btn-play');
+const btnStep = document.getElementById('btn-step');
+const btnReset = document.getElementById('btn-reset');
+const speedSlider = document.getElementById('speed-slider');
+const speedVal = document.getElementById('speed-val');
+const infoPanel = document.getElementById('info-panel');
+
+const paramEls = {
+  num: document.getElementById('p-num'),
+  eat: document.getElementById('p-eat'),
+  sleep: document.getElementById('p-sleep'),
+  die: document.getElementById('p-die'),
+  think: document.getElementById('p-think'),
+  strategy: document.getElementById('p-strategy'),
+};
+
+let activeScenario = null;
+
+function buildScenarioButtons() {
+  const list = document.getElementById('scenario-list');
+  list.innerHTML = '';
+  for (const sc of SCENARIOS) {
+    const btn = document.createElement('button');
+    btn.className = 'scenario-btn';
+    btn.dataset.id = sc.id;
+    btn.innerHTML = `<div class="label">${sc.icon} ${sc.label}</div><div class="desc">${sc.desc.slice(0,40)}...</div>`;
+    btn.onclick = () => selectScenario(sc.id);
+    list.appendChild(btn);
+  }
+}
+
+function selectScenario(id) {
+  const sc = SCENARIOS.find(s => s.id === id);
+  if (!sc) return;
+  activeScenario = id;
+
+  // Update UI
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  paramEls.num.value = sc.num;
+  paramEls.eat.value = sc.eat;
+  paramEls.sleep.value = sc.sleep;
+  paramEls.die.value = sc.die;
+  paramEls.think.value = sc.think;
+  paramEls.strategy.value = sc.strategy;
+
+  infoPanel.style.display = 'block';
+  infoPanel.innerHTML = `<strong>${sc.icon} ${sc.label}</strong><br>${sc.desc}`;
+
+  resetSim();
+}
+
+function getConfig() {
+  return {
+    num: parseInt(paramEls.num.value) || 5,
+    eat: parseInt(paramEls.eat.value) || 200,
+    sleep: parseInt(paramEls.sleep.value) || 100,
+    die: parseInt(paramEls.die.value) || 800,
+    think: parseInt(paramEls.think.value) || 0,
+    strategy: paramEls.strategy.value,
+  };
+}
+
+function resetSim() {
+  stop();
+  hideOverlay();
+  const cfg = getConfig();
+  sim = new Simulation(cfg);
+  sim.init();
+  sim.eventCb = addLogEntry;
+  clearLog();
+  buildSVG();
+  resizeTimeline();
+  updateSVG();
+  drawTimeline();
+}
+
+function doStep() {
+  if (!sim || sim.finished) return;
+  sim.tick();
+  updateSVG();
+  drawTimeline();
+
+  if (sim.deadlocked) {
+    stop();
+    showOverlay('🔴 デッドロック発生！', [
+      '全ての哲学者が1本のフォークを持ち、もう1本を待っています。',
+      'これは<strong>循環待ち</strong>（Coffman条件 #4）です。',
+      '誰もフォークを離さないため、全員が永遠に待ち続けます。',
+      '<strong>解決策</strong>：フォーク取得順を偶奇で交互にする → 偶奇戦略を試してみてください。'
+    ]);
+  }
+  if (sim.dead) {
+    stop();
+    const dp = sim.philos.find(p => p.state === S.DEAD);
+    showOverlay(`💀 哲学者 ${dp.id} 死亡！`, [
+      `最後の食事から <strong>${sim.dieMs}ms</strong> 以上経過しました。`,
+      `死亡時刻: ${sim.time}ms`,
+      `食事回数: ${dp.meals}回`,
+      sim.n === 1
+        ? 'フォークが1本しかないため、食事は不可能でした。'
+        : 'time_to_die を大きくするか、スケジュールを調整する必要があります。'
+    ]);
+  }
+  if (sim.finished && !sim.deadlocked && !sim.dead) {
+    stop();
+  }
+}
+
+function play() {
+  if (playing) return;
+  if (sim && sim.finished) resetSim();
+  playing = true;
+  btnPlay.textContent = '⏸ 停止';
+  btnPlay.classList.add('playing');
+  lastEvent = performance.now();
+  loop();
+}
+
+function stop() {
+  playing = false;
+  btnPlay.textContent = '▶ 再生';
+  btnPlay.classList.remove('playing');
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+}
+
+function loop() {
+  if (!playing) return;
+  const now = performance.now();
+  const interval = 1000 / speed;
+  if (now - lastEvent >= interval) {
+    doStep();
+    lastEvent = now;
+    if (sim.finished) { stop(); return; }
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+// Event bindings
+btnPlay.onclick = () => playing ? stop() : play();
+btnStep.onclick = () => { stop(); doStep(); };
+btnReset.onclick = resetSim;
+speedSlider.oninput = () => {
+  speed = parseInt(speedSlider.value);
+  speedVal.textContent = speed + 'x';
+};
+
+// Parameter change resets
+Object.values(paramEls).forEach(el => {
+  el.addEventListener('change', () => {
+    activeScenario = null;
+    document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+    infoPanel.style.display = 'none';
+    resetSim();
+  });
+});
+
+// Resize handler
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    resizeTimeline();
+    drawTimeline();
+  }, 100);
+});
+
+// ===== Init =====
+buildScenarioButtons();
+selectScenario('deadlock');
+</script>
+</body>
+</html>
