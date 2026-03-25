@@ -1,15 +1,9 @@
 #include "philo.h"
+#include <unistd.h>
 
 #define USAGE_MSG "Usage: ./philo N ttd tte tts [eat_count]\n"
 #define PARSE_ERR_MSG "Error: invalid argument\n"
-
-size_t ft_strlen(const char *s)
-{
-    size_t len = 0;
-    while (s[len])
-        len++;
-    return len;
-}
+#define THREAD_ERR_MSG "Error: failed to create thread\n"
 
 static int ft_atoi(const char *str)
 {
@@ -55,6 +49,37 @@ int parse_args(int argc, char **argv, t_data *data)
         return 1;
     }
     return 0;
+}
+
+static int start_simulation(t_data *data, pthread_t *monitor)
+{
+    int i;
+
+    i = 0;
+    while (i < data->num_philo)
+    {
+        if (pthread_create(&data->philos[i].thread, NULL, philo_routine,
+                           &data->philos[i]))
+        {
+            write(STDERR_FILENO, THREAD_ERR_MSG, sizeof(THREAD_ERR_MSG) - 1);
+            return 1;
+        }
+        i++;
+    }
+    return 0;
+}
+
+static void join_threads(t_data *data, pthread_t monitor)
+{
+    int i;
+
+    pthread_join(monitor, NULL);
+    i = 0;
+    while (i < data->num_philo)
+    {
+        pthread_join(data->philos[i].thread, NULL);
+        i++;
+    }
 }
 
 int main(int argc, char **argv)
