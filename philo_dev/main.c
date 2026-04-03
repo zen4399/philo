@@ -56,6 +56,11 @@ static int start_simulation(t_data *data, pthread_t *monitor)
     int i;
 
     i = 0;
+    if (pthread_create(monitor, NULL, monitor_routine, data))
+    {
+        write(STDERR_FILENO, THREAD_ERR_MSG, sizeof(THREAD_ERR_MSG) - 1);
+        return 1;
+    }
     while (i < data->num_philo)
     {
         if (pthread_create(&data->philos[i].thread, NULL, philo_routine,
@@ -86,7 +91,7 @@ int main(int argc, char **argv)
 {
     t_data data;
     t_philo *philos;
-    pthred_t monitor;
+    pthread_t monitor;
 
     if (parse_args(argc, argv, &data))
         return 1;

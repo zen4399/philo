@@ -27,7 +27,7 @@ typedef struct s_data
     t_philo *philos;
 } t_data;
 
-struct s_phile
+struct s_philo
 {
     int id;
     int eat_count;
@@ -46,5 +46,11 @@ void cleanup(t_data *data, t_philo *philos);
 void *philo_routine(void *arg);
 
 void *monitor_routine(void *arg);
+void *philo_routine(void *arg);
+
+long get_time_ms(void);
+void ft_usleep(long ms);
+int is_simulation_end(t_data *data);
+void print_status(t_philo *philo, char *msg);
 
 #endif
